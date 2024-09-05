@@ -25,7 +25,7 @@ func urlWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	url := string(body)
-	valid := validateUrl(url)
+	valid := validateURL(url)
 	if !valid {
 		http.Error(res, "wrong parameters", http.StatusBadRequest)
 		return
@@ -76,7 +76,7 @@ func generateShortURL() string {
 	return string(shortURL)
 }
 
-func validateUrl(url string) bool {
+func validateURL(url string) bool {
 	regex := `^https?://([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(/.*)?$`
 
 	m, _ := regexp.MatchString(regex, url)

@@ -39,11 +39,11 @@ func Test_urlWaiter(t *testing.T) {
 			expectedBody: "wrong parameters\n",
 		},
 		{
-			name:         "Error Reading Body",
+			name:         "Wrong parameters",
 			method:       http.MethodPost,
 			body:         string([]byte{0xFF}), // некорректный байт
 			expectedCode: http.StatusBadRequest,
-			expectedBody: "error when reading body\n",
+			expectedBody: "wrong parameters\n",
 		},
 	}
 
@@ -60,14 +60,14 @@ func Test_urlWaiter(t *testing.T) {
 			}
 
 			body, _ := ioutil.ReadAll(res.Body)
-			if tt.expectedBody != "" {
-				if string(body) != tt.expectedBody {
-					t.Errorf("expected body %v, got %v", tt.expectedBody, string(body))
-				}
-			} else {
+			if tt.expectedBody == "shortURL" {
 				re := regexp.MustCompile(`^http://localhost:8080/[a-zA-Z0-9]{8}$`)
 				if !re.MatchString(string(body)) {
 					t.Errorf("expected body to match regex, got %v", string(body))
+				}
+			} else {
+				if string(body) != tt.expectedBody {
+					t.Errorf("expected body %v, got %v", tt.expectedBody, string(body))
 				}
 			}
 		})

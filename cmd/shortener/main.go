@@ -33,10 +33,10 @@ func urlWaiter(res http.ResponseWriter, req *http.Request) {
 
 	su := generateShortURL()
 	relatesURLs[su] = url
-	resUrl := "http://localhost:8080/" + su
+	r := "http://localhost:8080/" + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(resUrl))
+	res.Write([]byte(r))
 }
 
 func urlReturner(res http.ResponseWriter, req *http.Request) {

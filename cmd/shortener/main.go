@@ -44,8 +44,7 @@ func urlReturner(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "only GET method is allowed", http.StatusBadRequest)
 		return
 	}
-
-	shortURL := req.PathValue("id")
+	shortURL := req.URL.Path[len("/"):]
 	originalURL, exists := relatesURLs[shortURL]
 	if !exists {
 		http.Error(res, "not found", http.StatusBadRequest)

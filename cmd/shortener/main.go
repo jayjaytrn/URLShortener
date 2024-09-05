@@ -64,7 +64,6 @@ func generateShortURL() string {
 
 	shortURL := make([]byte, keyLength)
 	for {
-		shortURL = make([]byte, keyLength)
 		for i := range shortURL {
 			shortURL[i] = charset[rand.Intn(len(charset))]
 		}

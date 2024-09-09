@@ -36,7 +36,7 @@ func urlWaiter(res http.ResponseWriter, req *http.Request) {
 
 	su := generateShortURL()
 	relatesURLs[su] = url
-	r := config.Config.ShortURLBase + "/" + su
+	r := config.Config.BaseURL + "/" + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(r))
@@ -90,7 +90,7 @@ func main() {
 	r.Post(`/`, urlWaiter)
 	r.Get(`/{id}`, urlReturner)
 
-	err := http.ListenAndServe(config.Config.ListenAddr, r)
+	err := http.ListenAndServe(config.Config.ServerAddress, r)
 	if err != nil {
 		panic(err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/go-chi/chi/v5"
 	"github.com/jayjaytrn/URLShortener/config"
 	"io"
@@ -84,6 +85,7 @@ func validateURL(url string) bool {
 }
 
 func main() {
+	flag.Parse()
 	r := chi.NewRouter()
 	r.Post(`/`, urlWaiter)
 	r.Get(`/{id}`, urlReturner)

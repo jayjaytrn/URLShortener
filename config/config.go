@@ -15,6 +15,5 @@ func SetArgs() {
 	if err != nil {
 		flag.StringVar(&Config.ServerAddress, "a", "localhost:8080", "server listen address")
 		flag.StringVar(&Config.BaseURL, "b", "http://localhost:8080", "short URL base")
-		flag.Parse()
 	}
 }

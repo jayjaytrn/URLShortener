@@ -36,7 +36,7 @@ func urlWaiter(res http.ResponseWriter, req *http.Request) {
 
 	su := generateShortURL()
 	relatesURLs[su] = url
-	r := config.Config.ShortURLBase + su
+	r := config.Config.ShortURLBase + "/" + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(r))

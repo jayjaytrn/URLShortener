@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
 	"io"
 	"math/rand"
 	"net/http"
@@ -82,11 +83,11 @@ func validateURL(url string) bool {
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/`, urlWaiter)
-	mux.HandleFunc(`/{id}`, urlReturner)
+	r := chi.NewRouter()
+	r.Post(`/`, urlWaiter)
+	r.Get(`/{id}`, urlReturner)
 
-	err := http.ListenAndServe(`:8080`, mux)
+	err := http.ListenAndServe(`:8080`, r)
 	if err != nil {
 		panic(err)
 	}

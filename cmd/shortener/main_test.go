@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -119,7 +118,7 @@ func Test_urlReturner(t *testing.T) {
 
 			req = httptest.NewRequest(tt.method, tt.path, nil)
 			if tt.path == "/shortURL" {
-				postRequest := httptest.NewRequest("POST", "http://localhost:8080/", ioutil.NopCloser(strings.NewReader("https://practicum.yandex.ru/")))
+				postRequest := httptest.NewRequest("POST", "http://localhost:8080/", io.NopCloser(strings.NewReader("https://practicum.yandex.ru/")))
 				postResponse := httptest.NewRecorder()
 
 				urlWaiter(postResponse, postRequest)

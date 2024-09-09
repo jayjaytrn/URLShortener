@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"github.com/go-chi/chi/v5"
+	"github.com/jayjaytrn/URLShortener/config"
 	"io"
 	"math/rand"
 	"net/http"
@@ -34,7 +36,7 @@ func urlWaiter(res http.ResponseWriter, req *http.Request) {
 
 	su := generateShortURL()
 	relatesURLs[su] = url
-	r := "http://localhost:8080/" + su
+	r := config.Config.ShortURLBase + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(r))
@@ -83,12 +85,17 @@ func validateURL(url string) bool {
 }
 
 func main() {
+	flag.Parse()
 	r := chi.NewRouter()
 	r.Post(`/`, urlWaiter)
 	r.Get(`/{id}`, urlReturner)
 
-	err := http.ListenAndServe(`:8080`, r)
+	err := http.ListenAndServe(config.Config.ListenAddr, r)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func init() {
+	config.SetArgs()
 }

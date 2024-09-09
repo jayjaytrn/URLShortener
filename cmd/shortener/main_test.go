@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -49,17 +50,19 @@ func Test_urlWaiter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(tt.method, "http://localhost:8080/", ioutil.NopCloser(strings.NewReader(tt.body)))
+			req := httptest.NewRequest(tt.method, "http://localhost:8080/", io.NopCloser(strings.NewReader(tt.body)))
 			w := httptest.NewRecorder()
 
 			urlWaiter(w, req)
 
 			res := w.Result()
+			defer res.Body.Close()
+
 			if res.StatusCode != tt.expectedCode {
 				t.Errorf("expected status %v, got %v", tt.expectedCode, res.StatusCode)
 			}
 
-			body, _ := ioutil.ReadAll(res.Body)
+			body, _ := io.ReadAll(res.Body)
 			if tt.expectedBody == "shortURL" {
 				re := regexp.MustCompile(`^http://localhost:8080/[a-zA-Z0-9]{8}$`)
 				if !re.MatchString(string(body)) {
@@ -122,7 +125,8 @@ func Test_urlReturner(t *testing.T) {
 				urlWaiter(postResponse, postRequest)
 
 				postResult := postResponse.Result()
-				postBody, _ = ioutil.ReadAll(postResult.Body)
+				defer postResult.Body.Close()
+				postBody, _ = io.ReadAll(postResult.Body)
 				req = httptest.NewRequest(tt.method, string(postBody), nil)
 			}
 
@@ -131,6 +135,7 @@ func Test_urlReturner(t *testing.T) {
 			urlReturner(getResponse, req)
 
 			getResult := getResponse.Result()
+			defer getResult.Body.Close()
 
 			if getResult.StatusCode != tt.expectedCode {
 				t.Errorf("expected status %v, got %v", tt.expectedCode, getResult.StatusCode)
@@ -140,7 +145,7 @@ func Test_urlReturner(t *testing.T) {
 				t.Errorf("expected Location header %v, got %v", tt.expectedHeader, locHeader)
 			}
 
-			body, _ := ioutil.ReadAll(getResult.Body)
+			body, _ := io.ReadAll(getResult.Body)
 			if string(body) != tt.expectedBody {
 				t.Errorf("expected body %v, got %v", tt.expectedBody, string(body))
 			}

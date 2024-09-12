@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func UrlWaiter(res http.ResponseWriter, req *http.Request) {
+func URLWaiter(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(res, "only POST method is allowed", http.StatusBadRequest)
 		return
@@ -37,7 +37,7 @@ func UrlWaiter(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(r))
 }
 
-func UrlReturner(res http.ResponseWriter, req *http.Request) {
+func URLReturner(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		http.Error(res, "only GET method is allowed", http.StatusBadRequest)
 		return

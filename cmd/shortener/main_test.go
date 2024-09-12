@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/jayjaytrn/URLShortener/internal/handlers"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -52,7 +53,7 @@ func Test_urlWaiter(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "http://localhost:8080/", io.NopCloser(strings.NewReader(tt.body)))
 			w := httptest.NewRecorder()
 
-			urlWaiter(w, req)
+			handlers.URLWaiter(w, req)
 
 			res := w.Result()
 			defer res.Body.Close()
@@ -121,7 +122,7 @@ func Test_urlReturner(t *testing.T) {
 				postRequest := httptest.NewRequest("POST", "http://localhost:8080/", io.NopCloser(strings.NewReader("https://practicum.yandex.ru/")))
 				postResponse := httptest.NewRecorder()
 
-				urlWaiter(postResponse, postRequest)
+				handlers.URLWaiter(postResponse, postRequest)
 
 				postResult := postResponse.Result()
 				defer postResult.Body.Close()
@@ -131,7 +132,7 @@ func Test_urlReturner(t *testing.T) {
 
 			getResponse := httptest.NewRecorder()
 
-			urlReturner(getResponse, req)
+			handlers.URLReturner(getResponse, req)
 
 			getResult := getResponse.Result()
 			defer getResult.Body.Close()

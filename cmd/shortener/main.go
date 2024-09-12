@@ -12,8 +12,8 @@ func main() {
 	config.SetArgs()
 	flag.Parse()
 	r := chi.NewRouter()
-	r.Post(`/`, handlers.UrlWaiter)
-	r.Get(`/{id}`, handlers.UrlReturner)
+	r.Post(`/`, handlers.URLWaiter)
+	r.Get(`/{id}`, handlers.URLReturner)
 
 	err := http.ListenAndServe(config.Config.ServerAddress, r)
 	if err != nil {

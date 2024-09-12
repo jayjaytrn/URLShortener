@@ -1,7 +1,7 @@
-package shortener
+package urlshort
 
 import (
-	"github.com/jayjaytrn/URLShortener/internal/handlers"
+	"github.com/jayjaytrn/URLShortener/internal/db"
 	"math/rand"
 	"regexp"
 	"time"
@@ -19,7 +19,7 @@ func GenerateShortURL() string {
 			shortURL[i] = charset[rand.Intn(len(charset))]
 		}
 
-		if _, exists := handlers.RelatesURLs[string(shortURL)]; !exists {
+		if _, exists := db.RelatesURLs[string(shortURL)]; !exists {
 			break
 		}
 	}

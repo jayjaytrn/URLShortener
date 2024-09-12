@@ -2,12 +2,11 @@ package handlers
 
 import (
 	"github.com/jayjaytrn/URLShortener/config"
-	"github.com/jayjaytrn/URLShortener/internal/shortener"
+	"github.com/jayjaytrn/URLShortener/internal/db"
+	"github.com/jayjaytrn/URLShortener/internal/urlshort"
 	"io"
 	"net/http"
 )
-
-var RelatesURLs = make(map[string]string)
 
 func UrlWaiter(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
@@ -24,14 +23,14 @@ func UrlWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	url := string(body)
-	valid := shortener.ValidateURL(url)
+	valid := urlshort.ValidateURL(url)
 	if !valid {
 		http.Error(res, "wrong parameters", http.StatusBadRequest)
 		return
 	}
 
-	su := shortener.GenerateShortURL()
-	RelatesURLs[su] = url
+	su := urlshort.GenerateShortURL()
+	db.RelatesURLs[su] = url
 	r := config.Config.BaseURL + "/" + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
@@ -44,7 +43,7 @@ func UrlReturner(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	shortURL := req.URL.Path[len("/"):]
-	originalURL, exists := RelatesURLs[shortURL]
+	originalURL, exists := db.RelatesURLs[shortURL]
 	if !exists {
 		http.Error(res, "not found", http.StatusBadRequest)
 		return

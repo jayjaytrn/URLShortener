@@ -8,10 +8,6 @@ import (
 	"net/http"
 )
 
-func init() {
-	config.SetArgs()
-}
-
 func main() {
 	flag.Parse()
 	r := chi.NewRouter()

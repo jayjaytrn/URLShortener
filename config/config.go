@@ -20,3 +20,7 @@ func SetArgs() {
 		fmt.Println("environments are not defined")
 	}
 }
+
+func init() {
+	SetArgs()
+}

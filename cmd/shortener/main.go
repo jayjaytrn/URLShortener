@@ -8,8 +8,11 @@ import (
 	"net/http"
 )
 
-func main() {
+func init() {
 	config.SetArgs()
+}
+
+func main() {
 	flag.Parse()
 	r := chi.NewRouter()
 	r.Post(`/`, handlers.URLWaiter)

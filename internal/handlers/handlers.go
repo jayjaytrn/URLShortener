@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"github.com/jayjaytrn/URLShortener/config"
-	shortener "github.com/jayjaytrn/URLShortener/internal/url"
+	"github.com/jayjaytrn/URLShortener/internal/shortener"
 	"io"
 	"net/http"
 )

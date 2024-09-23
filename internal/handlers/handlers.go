@@ -4,9 +4,62 @@ import (
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/db"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"time"
 )
+
+type (
+	responseData struct {
+		status int
+		size   int
+	}
+
+	loggingResponseWriter struct {
+		http.ResponseWriter
+		responseData *responseData
+	}
+)
+
+func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := r.ResponseWriter.Write(b)
+	r.responseData.size += size
+	return size, err
+}
+
+func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+	r.ResponseWriter.WriteHeader(statusCode)
+	r.responseData.status = statusCode
+}
+
+func WithLogging(h http.HandlerFunc, sugar *zap.SugaredLogger) http.HandlerFunc {
+	logFn := func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		rd := &responseData{
+			status: 0,
+			size:   0,
+		}
+
+		lw := loggingResponseWriter{
+			ResponseWriter: w,
+			responseData:   rd,
+		}
+		h.ServeHTTP(&lw, r)
+
+		duration := time.Since(start)
+
+		sugar.Infoln(
+			"uri", r.RequestURI,
+			"method", r.Method,
+			"status", rd.status,
+			"duration", duration,
+			"size", rd.size,
+		)
+	}
+	return logFn
+}
 
 func URLWaiter(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {

@@ -17,6 +17,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Post(`/`, handlers.WithLogging(handlers.URLWaiter, sugar))
+	r.Post(`/api/shorten`, handlers.WithLogging(handlers.URLWaiter, sugar))
 	r.Get(`/{id}`, handlers.WithLogging(handlers.URLReturner, sugar))
 
 	err := http.ListenAndServe(config.Config.ServerAddress, r)

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/db"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
@@ -11,6 +13,14 @@ import (
 )
 
 type (
+	ShortenRequest struct {
+		Url string `json:"url"`
+	}
+
+	ShortenResponse struct {
+		Result string `json:"result"`
+	}
+
 	responseData struct {
 		status int
 		size   int
@@ -104,4 +114,44 @@ func URLReturner(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Location", originalURL)
 	res.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func Shorten(res http.ResponseWriter, req *http.Request) {
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(req.Body)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var shortenRequest ShortenRequest
+	err = json.Unmarshal(buf.Bytes(), &shortenRequest)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	url := shortenRequest.Url
+	valid := urlshort.ValidateURL(url)
+	if !valid {
+		http.Error(res, "wrong parameters", http.StatusBadRequest)
+		return
+	}
+
+	su := urlshort.GenerateShortURL()
+	db.RelatesURLs[su] = url
+	r := config.Config.BaseURL + "/" + su
+	shortenResponse := ShortenResponse{
+		Result: r,
+	}
+	br, err := json.Marshal(shortenResponse)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+	res.Write(br)
+
 }

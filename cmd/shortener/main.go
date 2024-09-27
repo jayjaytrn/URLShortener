@@ -43,7 +43,7 @@ func main() {
 	r.Get(`/{id}`,
 		func(w http.ResponseWriter, r *http.Request) {
 			middleware.Conveyor(
-				http.HandlerFunc(handlers.Shorten),
+				http.HandlerFunc(handlers.URLReturner),
 				sugar,
 				middleware.WithLogging,
 				middleware.WriteWithCompression,

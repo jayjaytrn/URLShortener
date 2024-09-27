@@ -41,7 +41,20 @@ func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middlewar
 
 func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		acceptEncodingValues := r.Header.Values("Accept-Encoding")
+		combined := strings.Join(acceptEncodingValues, ", ")
+		encodings := strings.Split(combined, ", ")
+		target := "gzip"
+		found := false
+
+		for _, encoding := range encodings {
+			if encoding == target {
+				found = true
+				break
+			}
+		}
+
+		if !found {
 			sugar.Info("Accept-Encoding is not allowed")
 			h.ServeHTTP(w, r)
 			return
@@ -69,7 +82,20 @@ func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler
 
 func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		contentEncodingValues := r.Header.Values("Accept-Encoding")
+		combined := strings.Join(contentEncodingValues, ", ")
+		encodings := strings.Split(combined, ", ")
+		target := "gzip"
+		found := false
+
+		for _, encoding := range encodings {
+			if encoding == target {
+				found = true
+				break
+			}
+		}
+
+		if !found {
 			sugar.Info("Content-Encoding is not allowed")
 			h.ServeHTTP(w, r)
 			return

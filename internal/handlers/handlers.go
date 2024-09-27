@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/jayjaytrn/URLShortener/config"
-	"github.com/jayjaytrn/URLShortener/internal/db"
+	"github.com/jayjaytrn/URLShortener/internal/storage"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 type (
@@ -42,7 +43,15 @@ func URLWaiter(res http.ResponseWriter, req *http.Request) {
 	}
 
 	su := urlshort.GenerateShortURL()
-	db.RelatesURLs[su] = url
+
+	storageLastIndex := len(storage.UrlStorage)
+	us := storage.URLData{
+		UUID:        strconv.Itoa(storageLastIndex),
+		OriginalUrl: url,
+		ShortUrl:    su,
+	}
+	storage.AddURL(us)
+
 	r := config.Config.BaseURL + "/" + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
@@ -55,14 +64,19 @@ func URLReturner(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	shortURL := req.URL.Path[len("/"):]
-	originalURL, exists := db.RelatesURLs[shortURL]
-	if !exists {
-		http.Error(res, "not found", http.StatusBadRequest)
-		return
+
+	originalURL := ""
+	for _, urlData := range storage.UrlStorage {
+		if urlData.ShortUrl == shortURL {
+			originalURL = urlData.OriginalUrl
+			res.Header().Set("Location", originalURL)
+			res.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
 	}
 
-	res.Header().Set("Location", originalURL)
-	res.WriteHeader(http.StatusTemporaryRedirect)
+	http.Error(res, "not found", http.StatusBadRequest)
+	return
 }
 
 func Shorten(res http.ResponseWriter, req *http.Request) {
@@ -88,7 +102,15 @@ func Shorten(res http.ResponseWriter, req *http.Request) {
 	}
 
 	su := urlshort.GenerateShortURL()
-	db.RelatesURLs[su] = url
+
+	storageLastIndex := len(storage.UrlStorage)
+	us := storage.URLData{
+		UUID:        strconv.Itoa(storageLastIndex),
+		OriginalUrl: url,
+		ShortUrl:    su,
+	}
+	storage.AddURL(us)
+
 	r := config.Config.BaseURL + "/" + su
 	shortenResponse := ShortenResponse{
 		Result: r,

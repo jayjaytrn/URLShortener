@@ -1,7 +1,7 @@
 package urlshort
 
 import (
-	"github.com/jayjaytrn/URLShortener/internal/db"
+	"github.com/jayjaytrn/URLShortener/internal/storage"
 	"math/rand"
 	"regexp"
 	"time"
@@ -19,7 +19,12 @@ func GenerateShortURL() string {
 			shortURL[i] = charset[rand.Intn(len(charset))]
 		}
 
-		if _, exists := db.RelatesURLs[string(shortURL)]; !exists {
+		oldURLs := make(map[string]interface{})
+		for _, urlData := range storage.UrlStorage {
+			oldURLs[urlData.ShortUrl] = struct{}{}
+		}
+
+		if _, exists := oldURLs[string(shortURL)]; !exists {
 			break
 		}
 	}

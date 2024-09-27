@@ -6,6 +6,7 @@ import (
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/handlers"
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
+	"github.com/jayjaytrn/URLShortener/internal/storage"
 	"github.com/jayjaytrn/URLShortener/logging"
 	"net/http"
 )
@@ -15,6 +16,18 @@ func main() {
 
 	sugar := logging.GetSugaredLogger()
 	defer sugar.Sync()
+
+	err := storage.LoadURLStorageFromFile()
+	if err != nil {
+		panic(err)
+	}
+
+	mgr, err := storage.NewManager()
+	if err != nil {
+		panic(err)
+	}
+
+	defer mgr.WriteURLs()
 
 	r := chi.NewRouter()
 	r.Post(`/`,
@@ -51,7 +64,7 @@ func main() {
 		},
 	)
 
-	err := http.ListenAndServe(config.Config.ServerAddress, r)
+	err = http.ListenAndServe(config.Config.ServerAddress, r)
 	if err != nil {
 		panic(err)
 	}

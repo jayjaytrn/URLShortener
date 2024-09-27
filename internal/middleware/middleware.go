@@ -76,13 +76,6 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 
 func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		contentType := r.Header.Get("Content-Type")
-		if contentType != "application/json" && contentType != "text/html" {
-			sugar.Info("Content-Type is not supported for decompression. Content-Type: " + contentType)
-			h.ServeHTTP(w, r)
-			return
-		}
-
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 		if !sendsGzip {

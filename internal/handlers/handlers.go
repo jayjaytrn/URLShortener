@@ -37,7 +37,7 @@ func URLWaiter(res http.ResponseWriter, req *http.Request) {
 	url := string(body)
 	valid := urlshort.ValidateURL(url)
 	if !valid {
-		http.Error(res, "wrong parameters", http.StatusBadRequest)
+		http.Error(res, "only string value allowed / wrong data value: "+url, http.StatusBadRequest)
 		return
 	}
 

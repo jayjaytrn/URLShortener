@@ -80,7 +80,7 @@ func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler
 
 func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		contentEncodingValues := r.Header.Values("Accept-Encoding")
+		contentEncodingValues := r.Header.Values("Content-Encoding")
 		target := "gzip"
 		found := false
 

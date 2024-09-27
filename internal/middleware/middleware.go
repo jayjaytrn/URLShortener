@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -83,8 +84,11 @@ func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler 
 		target := "gzip"
 		found := false
 
-		for _, encoding := range contentEncodingValues {
-			if encoding == target {
+		contentEncoding := strings.Join(contentEncodingValues, ", ")
+		encodings := strings.Split(contentEncoding, ", ")
+
+		for _, encoding := range encodings {
+			if strings.TrimSpace(encoding) == target {
 				found = true
 				break
 			}

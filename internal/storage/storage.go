@@ -3,10 +3,8 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"github.com/jayjaytrn/URLShortener/config"
 	"os"
-	"syscall"
 )
 
 var UrlStorage []URLData
@@ -64,7 +62,7 @@ func (p *Manager) WriteURLs() error {
 func LoadURLStorageFromFile() error {
 	file, err := os.Open(config.Config.FileStoragePath)
 	if err != nil {
-		if errors.Is(err, syscall.ERROR_FILE_NOT_FOUND) {
+		if os.IsNotExist(err) {
 			UrlStorage = []URLData{}
 			return nil
 		}

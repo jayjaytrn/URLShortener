@@ -50,7 +50,7 @@ func URLWaiter(res http.ResponseWriter, req *http.Request) {
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	storage.AddURL(us)
+	storage.WriteManager.AddURL(us)
 
 	r := config.Config.BaseURL + "/" + su
 	res.Header().Set("content-type", "text/plain")
@@ -108,7 +108,7 @@ func Shorten(res http.ResponseWriter, req *http.Request) {
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	storage.AddURL(us)
+	storage.WriteManager.AddURL(us)
 
 	r := config.Config.BaseURL + "/" + su
 	shortenResponse := ShortenResponse{

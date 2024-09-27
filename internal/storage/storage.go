@@ -8,7 +8,7 @@ import (
 )
 
 var URLStorage []URLData
-var NewURLs []URLData
+var WriteManager *Manager
 
 type (
 	URLData struct {
@@ -18,45 +18,37 @@ type (
 	}
 
 	Manager struct {
-		file      *os.File
-		lastIndex int
+		file *os.File
 	}
 )
 
-func NewManager() (*Manager, error) {
+func StartNewManager() error {
 	file, err := os.OpenFile(config.Config.FileStoragePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Manager{file: file}, nil
+	WriteManager = &Manager{file: file}
+	return nil
 }
 
 func (p *Manager) Close() error {
 	return p.file.Close()
 }
 
-func (p *Manager) WriteURLs() error {
-	var data []byte
-	var err error
-
-	for _, u := range NewURLs {
-		d, err := json.Marshal(&u)
-		if err != nil {
-			return err
-		}
-		data = append(data, d...)
-		data = append(data, '\n')
+func (p *Manager) WriteURL(url URLData) error {
+	data, err := json.Marshal(&url)
+	if err != nil {
+		return err
 	}
+	data = append(data, '\n')
 
 	_, err = p.file.Write(data)
 	if err != nil {
 		return err
 	}
 
-	err = p.Close()
 	return err
-
 }
 
 func LoadURLStorageFromFile() error {
@@ -97,7 +89,7 @@ func LoadURLStorageFromFile() error {
 	return nil
 }
 
-func AddURL(url URLData) {
+func (p *Manager) AddURL(url URLData) {
 	URLStorage = append(URLStorage, url)
-	NewURLs = append(NewURLs, url)
+	p.WriteURL(url)
 }

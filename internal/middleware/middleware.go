@@ -114,6 +114,7 @@ func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler 
 		newReq := r.Clone(r.Context())
 		newReq.Body = gz
 		newReq.ContentLength = -1
+		newReq.Header.Set("Content-Encoding", "gzip")
 
 		h.ServeHTTP(w, newReq)
 	})

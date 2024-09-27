@@ -89,16 +89,6 @@ func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler 
 				break
 			}
 		}
-		//
-		//contentEncoding := strings.Join(contentEncodingValues, ", ")
-		//encodings := strings.Split(contentEncoding, ", ")
-
-		//for _, encoding := range encodings {
-		//	if strings.TrimSpace(encoding) == target {
-		//		found = true
-		//		break
-		//	}
-		//}
 
 		if !found {
 			sugar.Info("Content-Encoding is not allowed")

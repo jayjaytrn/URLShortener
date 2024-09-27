@@ -42,15 +42,6 @@ func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middlewar
 
 func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		acceptEncoding := r.Header.Get("Accept-Encoding")
-		supportsGzip := strings.Contains(acceptEncoding, "gzip")
-
-		if !supportsGzip {
-			sugar.Info("Accept-Encoding is not allowed")
-			h.ServeHTTP(w, r)
-			return
-		}
-
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/json" && contentType != "text/html" {
 			sugar.Info("Content-Type is not supported for compression. Content-Type: " + contentType)
@@ -58,9 +49,18 @@ func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler
 			return
 		}
 
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		supportsGzip := strings.Contains(acceptEncoding, "gzip")
+		if !supportsGzip {
+			sugar.Info("Accept-Encoding is not allowed")
+			h.ServeHTTP(w, r)
+			return
+		}
+
 		gz := newGzipWriter(w)
 
 		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Del("Content-Length")
 		h.ServeHTTP(gzipWriter{ResponseWriter: w, GzipWriter: gz}, r)
 	})
 }
@@ -88,15 +88,6 @@ func newGzipWriter(w http.ResponseWriter) *gzipWriter {
 
 func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		contentEncoding := r.Header.Get("Content-Encoding")
-		sendsGzip := strings.Contains(contentEncoding, "gzip")
-
-		if !sendsGzip {
-			sugar.Info("Content-Encoding is not allowed")
-			h.ServeHTTP(w, r)
-			return
-		}
-
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/json" && contentType != "text/html" {
 			sugar.Info("Content-Type is not supported for decompression. Content-Type: " + contentType)
@@ -104,13 +95,23 @@ func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler 
 			return
 		}
 
+		contentEncoding := r.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+		if !sendsGzip {
+			sugar.Info("Content-Encoding is not allowed")
+			h.ServeHTTP(w, r)
+			return
+		}
+
 		gr, err := newGzipReader(r.Body)
 		if err != nil {
-			sugar.Error("Failed to create gzip writer", zap.Error(err))
+			sugar.Error("Failed to create gzip reader", zap.Error(err))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		defer r.Body.Close()
 		r.Body = gr.r
+
 		defer gr.Close()
 
 		h.ServeHTTP(w, r)

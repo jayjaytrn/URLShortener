@@ -20,8 +20,8 @@ func GenerateShortURL() string {
 		}
 
 		oldURLs := make(map[string]interface{})
-		for _, urlData := range storage.UrlStorage {
-			oldURLs[urlData.ShortUrl] = struct{}{}
+		for _, urlData := range storage.URLStorage {
+			oldURLs[urlData.ShortURL] = struct{}{}
 		}
 
 		if _, exists := oldURLs[string(shortURL)]; !exists {

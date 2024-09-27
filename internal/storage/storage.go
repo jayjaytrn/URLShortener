@@ -7,14 +7,14 @@ import (
 	"os"
 )
 
-var UrlStorage []URLData
+var URLStorage []URLData
 var NewURLs []URLData
 
 type (
 	URLData struct {
 		UUID        string `json:"uuid"`
-		ShortUrl    string `json:"short_url"`
-		OriginalUrl string `json:"original_url"`
+		ShortURL    string `json:"short_url"`
+		OriginalURL string `json:"original_url"`
 	}
 
 	Manager struct {
@@ -63,7 +63,7 @@ func LoadURLStorageFromFile() error {
 	file, err := os.Open(config.Config.FileStoragePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			UrlStorage = []URLData{}
+			URLStorage = []URLData{}
 			return nil
 		}
 		return err
@@ -76,7 +76,7 @@ func LoadURLStorageFromFile() error {
 	}
 
 	if fi.Size() == 0 {
-		UrlStorage = []URLData{}
+		URLStorage = []URLData{}
 		return nil
 	}
 
@@ -87,7 +87,7 @@ func LoadURLStorageFromFile() error {
 		if err = json.Unmarshal(line, &data); err != nil {
 			return err
 		}
-		UrlStorage = append(UrlStorage, data)
+		URLStorage = append(URLStorage, data)
 	}
 
 	if err = scanner.Err(); err != nil {
@@ -98,6 +98,6 @@ func LoadURLStorageFromFile() error {
 }
 
 func AddURL(url URLData) {
-	UrlStorage = append(UrlStorage, url)
+	URLStorage = append(URLStorage, url)
 	NewURLs = append(NewURLs, url)
 }

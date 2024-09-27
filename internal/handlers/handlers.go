@@ -44,11 +44,11 @@ func URLWaiter(res http.ResponseWriter, req *http.Request) {
 
 	su := urlshort.GenerateShortURL()
 
-	storageLastIndex := len(storage.UrlStorage)
+	storageLastIndex := len(storage.URLStorage)
 	us := storage.URLData{
 		UUID:        strconv.Itoa(storageLastIndex),
-		OriginalUrl: url,
-		ShortUrl:    su,
+		OriginalURL: url,
+		ShortURL:    su,
 	}
 	storage.AddURL(us)
 
@@ -66,9 +66,9 @@ func URLReturner(res http.ResponseWriter, req *http.Request) {
 	shortURL := req.URL.Path[len("/"):]
 
 	originalURL := ""
-	for _, urlData := range storage.UrlStorage {
-		if urlData.ShortUrl == shortURL {
-			originalURL = urlData.OriginalUrl
+	for _, urlData := range storage.URLStorage {
+		if urlData.ShortURL == shortURL {
+			originalURL = urlData.OriginalURL
 			res.Header().Set("Location", originalURL)
 			res.WriteHeader(http.StatusTemporaryRedirect)
 			return
@@ -76,7 +76,6 @@ func URLReturner(res http.ResponseWriter, req *http.Request) {
 	}
 
 	http.Error(res, "not found", http.StatusBadRequest)
-	return
 }
 
 func Shorten(res http.ResponseWriter, req *http.Request) {
@@ -103,11 +102,11 @@ func Shorten(res http.ResponseWriter, req *http.Request) {
 
 	su := urlshort.GenerateShortURL()
 
-	storageLastIndex := len(storage.UrlStorage)
+	storageLastIndex := len(storage.URLStorage)
 	us := storage.URLData{
 		UUID:        strconv.Itoa(storageLastIndex),
-		OriginalUrl: url,
-		ShortUrl:    su,
+		OriginalURL: url,
+		ShortURL:    su,
 	}
 	storage.AddURL(us)
 

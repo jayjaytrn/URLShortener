@@ -9,6 +9,9 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/storage"
 	"github.com/jayjaytrn/URLShortener/logging"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -27,7 +30,8 @@ func main() {
 		panic(err)
 	}
 
-	defer mgr.WriteURLs()
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	r := chi.NewRouter()
 	r.Post(`/`,
@@ -68,4 +72,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	go func() {
+		err = http.ListenAndServe(config.Config.ServerAddress, r)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	<-quit
+	mgr.WriteURLs()
 }

@@ -5,7 +5,6 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -42,12 +41,10 @@ func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middlewar
 func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		acceptEncodingValues := r.Header.Values("Accept-Encoding")
-		combined := strings.Join(acceptEncodingValues, ", ")
-		encodings := strings.Split(combined, ", ")
 		target := "gzip"
 		found := false
 
-		for _, encoding := range encodings {
+		for _, encoding := range acceptEncodingValues {
 			if encoding == target {
 				found = true
 				break
@@ -83,12 +80,10 @@ func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler
 func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contentEncodingValues := r.Header.Values("Accept-Encoding")
-		combined := strings.Join(contentEncodingValues, ", ")
-		encodings := strings.Split(combined, ", ")
 		target := "gzip"
 		found := false
 
-		for _, encoding := range encodings {
+		for _, encoding := range contentEncodingValues {
 			if encoding == target {
 				found = true
 				break

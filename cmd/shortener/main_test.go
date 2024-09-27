@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/jayjaytrn/URLShortener/internal/handlers"
+	"github.com/jayjaytrn/URLShortener/internal/storage"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,8 @@ import (
 )
 
 func Test_urlWaiter(t *testing.T) {
+	storage.StartNewManager()
+
 	tests := []struct {
 		name         string
 		method       string
@@ -50,6 +53,7 @@ func Test_urlWaiter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
 			req := httptest.NewRequest(tt.method, "http://localhost:8080/", io.NopCloser(strings.NewReader(tt.body)))
 			w := httptest.NewRecorder()
 
@@ -78,6 +82,8 @@ func Test_urlWaiter(t *testing.T) {
 }
 
 func Test_urlReturner(t *testing.T) {
+	storage.StartNewManager()
+
 	tests := []struct {
 		name           string
 		method         string

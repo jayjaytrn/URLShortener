@@ -51,6 +51,11 @@ func (p *Manager) WriteURL(url URLData) error {
 	return err
 }
 
+func (p *Manager) AddURL(url URLData) {
+	URLStorage = append(URLStorage, url)
+	p.WriteURL(url)
+}
+
 func LoadURLStorageFromFile() error {
 	file, err := os.Open(config.Config.FileStoragePath)
 	if err != nil {
@@ -87,9 +92,4 @@ func LoadURLStorageFromFile() error {
 	}
 
 	return nil
-}
-
-func (p *Manager) AddURL(url URLData) {
-	URLStorage = append(URLStorage, url)
-	p.WriteURL(url)
 }

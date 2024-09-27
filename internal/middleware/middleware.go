@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -21,15 +22,16 @@ type (
 
 	gzipWriter struct {
 		http.ResponseWriter
-		Writer io.Writer
+		GzipWriter io.Writer
+	}
+
+	gzipReader struct {
+		r          io.ReadCloser
+		GzipReader *gzip.Reader
 	}
 
 	Middleware func(http.Handler, *zap.SugaredLogger) http.Handler
 )
-
-func (w gzipWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
-}
 
 func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middleware) http.Handler {
 	for _, middleware := range middlewares {
@@ -40,18 +42,10 @@ func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middlewar
 
 func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		acceptEncodingValues := r.Header.Values("Accept-Encoding")
-		target := "gzip"
-		found := false
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		supportsGzip := strings.Contains(acceptEncoding, "gzip")
 
-		for _, encoding := range acceptEncodingValues {
-			if encoding == target {
-				found = true
-				break
-			}
-		}
-
-		if !found {
+		if !supportsGzip {
 			sugar.Info("Accept-Encoding is not allowed")
 			h.ServeHTTP(w, r)
 			return
@@ -64,33 +58,40 @@ func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
-		if err != nil {
-			sugar.Error("Failed to create gzip writer", zap.Error(err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		defer gz.Close()
+		gz := newGzipWriter(w)
 
 		w.Header().Set("Content-Encoding", "gzip")
-		h.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+		h.ServeHTTP(gzipWriter{ResponseWriter: w, GzipWriter: gz}, r)
 	})
+}
+
+func (r *gzipReader) Read(p []byte) (n int, err error) {
+	return r.GzipReader.Read(p)
+}
+
+func (r *gzipReader) Close() error {
+	if err := r.r.Close(); err != nil {
+		return err
+	}
+	return r.GzipReader.Close()
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+	return w.GzipWriter.Write(b)
+}
+
+func newGzipWriter(w http.ResponseWriter) *gzipWriter {
+	return &gzipWriter{
+		GzipWriter: gzip.NewWriter(w),
+	}
 }
 
 func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		contentEncodingValues := r.Header.Values("Content-Encoding")
-		target := "gzip"
-		found := false
+		contentEncoding := r.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
 
-		for _, encoding := range contentEncodingValues {
-			if encoding == target {
-				found = true
-				break
-			}
-		}
-
-		if !found {
+		if !sendsGzip {
 			sugar.Info("Content-Encoding is not allowed")
 			h.ServeHTTP(w, r)
 			return
@@ -103,20 +104,40 @@ func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler 
 			return
 		}
 
-		gz, err := gzip.NewReader(r.Body)
+		gr, err := newGzipReader(r.Body)
 		if err != nil {
 			sugar.Error("Failed to create gzip writer", zap.Error(err))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		defer gz.Close()
+		r.Body = gr.r
+		defer gr.Close()
 
-		newReq := r.Clone(r.Context())
-		newReq.Body = gz
-		newReq.ContentLength = -1
-
-		h.ServeHTTP(w, newReq)
+		h.ServeHTTP(w, r)
 	})
+}
+
+func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := r.ResponseWriter.Write(b)
+	r.responseData.size += size
+	return size, err
+}
+
+func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+	r.ResponseWriter.WriteHeader(statusCode)
+	r.responseData.status = statusCode
+}
+
+func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
+	zr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &gzipReader{
+		r:          r,
+		GzipReader: zr,
+	}, nil
 }
 
 func WithLogging(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
@@ -144,15 +165,4 @@ func WithLogging(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 			"size", rd.size,
 		)
 	})
-}
-
-func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size
-	return size, err
-}
-
-func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode
 }

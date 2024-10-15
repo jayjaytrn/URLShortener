@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/jayjaytrn/URLShortener/internal/db/storage"
 	"github.com/jayjaytrn/URLShortener/internal/handlers"
-	"github.com/jayjaytrn/URLShortener/internal/storage"
 	"io"
 	"net/http"
 	"net/http/httptest"

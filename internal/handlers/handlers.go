@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/jayjaytrn/URLShortener/config"
-	"github.com/jayjaytrn/URLShortener/internal/storage"
+	"github.com/jayjaytrn/URLShortener/internal/db"
+	"github.com/jayjaytrn/URLShortener/internal/types"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
 	"io"
 	"net/http"
-	"strconv"
 )
 
 type (
@@ -21,7 +21,12 @@ type (
 	}
 )
 
-func URLWaiter(res http.ResponseWriter, req *http.Request) {
+type Handler struct {
+	Storage db.ShortenerStorage
+	Config  *config.Config
+}
+
+func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(res, "only POST method is allowed", http.StatusBadRequest)
 		return
@@ -44,41 +49,49 @@ func URLWaiter(res http.ResponseWriter, req *http.Request) {
 
 	su := urlshort.GenerateShortURL()
 
-	storageLastIndex := len(storage.URLStorage)
-	us := storage.URLData{
-		UUID:        strconv.Itoa(storageLastIndex),
+	storageLastIndex, err := h.Storage.GetNextUUID()
+	if err != nil {
+		http.Error(res, "could not generate UUID", http.StatusInternalServerError)
+		return
+	}
+	urlData := types.URLData{
+		UUID:        storageLastIndex,
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	storage.WriteManager.AddURL(us)
+	//storage.WriteManager.Put(us)
+	err = h.Storage.Put(urlData)
+	if err != nil {
+		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+	}
 
-	r := config.Config.BaseURL + "/" + su
+	r := h.Config.BaseURL + "/" + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(r))
 }
 
-func URLReturner(res http.ResponseWriter, req *http.Request) {
+func (h *Handler) URLReturner(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		http.Error(res, "only GET method is allowed", http.StatusBadRequest)
 		return
 	}
-	shortURL := req.URL.Path[len("/"):]
 
-	originalURL := ""
-	for _, urlData := range storage.URLStorage {
-		if urlData.ShortURL == shortURL {
-			originalURL = urlData.OriginalURL
-			res.Header().Set("Location", originalURL)
-			res.WriteHeader(http.StatusTemporaryRedirect)
-			return
-		}
+	shortURL := req.URL.Path[len("/"):] // Получаем короткий URL из пути
+
+	// Получаем оригинальный URL
+	originalURL, err := h.Storage.GetOriginal(shortURL)
+	if err != nil {
+		http.Error(res, "URL not found", http.StatusNotFound)
+		return
 	}
 
-	http.Error(res, "not found", http.StatusBadRequest)
+	// Перенаправляем на оригинальный URL
+	res.Header().Set("Location", originalURL)
+	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func Shorten(res http.ResponseWriter, req *http.Request) {
+func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
@@ -102,15 +115,22 @@ func Shorten(res http.ResponseWriter, req *http.Request) {
 
 	su := urlshort.GenerateShortURL()
 
-	storageLastIndex := len(storage.URLStorage)
-	us := storage.URLData{
-		UUID:        strconv.Itoa(storageLastIndex),
+	storageLastIndex, err := h.Storage.GetNextUUID()
+	if err != nil {
+		http.Error(res, "could not generate UUID", http.StatusInternalServerError)
+		return
+	}
+	urlData := types.URLData{
+		UUID:        storageLastIndex,
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	storage.WriteManager.AddURL(us)
+	err = h.Storage.Put(urlData)
+	if err != nil {
+		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+	}
 
-	r := config.Config.BaseURL + "/" + su
+	r := h.Config.BaseURL + "/" + su
 	shortenResponse := ShortenResponse{
 		Result: r,
 	}

@@ -1,7 +1,7 @@
 package urlshort
 
 import (
-	"github.com/jayjaytrn/URLShortener/internal/storage"
+	"github.com/jayjaytrn/URLShortener/internal/db/storage"
 	"math/rand"
 	"regexp"
 	"time"

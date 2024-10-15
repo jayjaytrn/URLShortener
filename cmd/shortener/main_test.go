@@ -15,7 +15,12 @@ import (
 )
 
 func Test_urlWaiter(t *testing.T) {
-	cfg := config.GetConfig()
+	cfg := &config.Config{
+		ServerAddress:   "localhost:8080",
+		BaseURL:         "http://localhost:8080",
+		FileStoragePath: "storage.json",
+		StorageType:     "file",
+	}
 
 	storage, err := filestorage.NewManager(cfg)
 	if err != nil {
@@ -96,7 +101,12 @@ func Test_urlWaiter(t *testing.T) {
 }
 
 func Test_urlReturner(t *testing.T) {
-	cfg := config.GetConfig()
+	cfg := &config.Config{
+		ServerAddress:   "localhost:8080",
+		BaseURL:         "http://localhost:8080",
+		FileStoragePath: "storage.json",
+		StorageType:     "file",
+	}
 
 	storage, err := filestorage.NewManager(cfg)
 	if err != nil {

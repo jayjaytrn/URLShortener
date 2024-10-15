@@ -17,7 +17,7 @@ import (
 func Test_urlWaiter(t *testing.T) {
 	cfg := config.GetConfig()
 
-	storage, err := filestorage.NewFileManager(cfg)
+	storage, err := filestorage.NewManager(cfg)
 	if err != nil {
 		t.Fatalf("failed to initialize file storage: %v", err)
 	}
@@ -98,7 +98,7 @@ func Test_urlWaiter(t *testing.T) {
 func Test_urlReturner(t *testing.T) {
 	cfg := config.GetConfig()
 
-	storage, err := filestorage.NewFileManager(cfg)
+	storage, err := filestorage.NewManager(cfg)
 	if err != nil {
 		t.Fatalf("failed to initialize file storage: %v", err)
 	}

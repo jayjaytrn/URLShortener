@@ -17,7 +17,7 @@ type Manager struct {
 	URLStorage *[]types.URLData
 }
 
-func NewFileManager(cfg *config.Config) (*Manager, error) {
+func NewManager(cfg *config.Config) (*Manager, error) {
 	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err

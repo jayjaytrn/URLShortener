@@ -3,6 +3,7 @@ package memorystorage
 import (
 	"context"
 	"fmt"
+	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 )
 
@@ -10,10 +11,10 @@ type Manager struct {
 	RelatesURLs map[string]string
 }
 
-func NewMemoryManager() *Manager {
+func NewManager(_ *config.Config) (*Manager, error) {
 	manager := &Manager{}
 	manager.RelatesURLs = make(map[string]string)
-	return manager
+	return manager, nil
 }
 
 func (m *Manager) GetOriginal(shortURL string) (string, error) {

@@ -33,7 +33,7 @@ func GetConfig() *Config {
 	}
 
 	if config.DatabaseDSN != "" {
-		config.StorageType = "db"
+		config.StorageType = "postgres"
 		return config
 	}
 

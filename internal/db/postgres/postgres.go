@@ -82,6 +82,10 @@ func (m *Manager) GetNextUUID() (string, error) {
 	return nextUUID, nil
 }
 
+func (m *Manager) Ping(ctx context.Context) error {
+	return m.db.PingContext(ctx)
+}
+
 // Close закрывает соединение с базой данных
 func (m *Manager) Close(ctx context.Context) error {
 	return m.db.Close()

@@ -17,4 +17,6 @@ type ShortenerStorage interface {
 	GetNextUUID() (string, error)
 	// Close закрывает соединение с базой
 	Close(ctx context.Context) error
+	// Ping проверяет доступность хранилища
+	Ping(ctx context.Context) error
 }

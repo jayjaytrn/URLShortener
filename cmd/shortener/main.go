@@ -69,6 +69,17 @@ func main() {
 		},
 	)
 
+	r.Get(`/ping`,
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.Conveyor(
+				http.HandlerFunc(h.Ping),
+				logger,
+				middleware.WithLogging,
+				middleware.WriteWithCompression,
+			).ServeHTTP(w, r)
+		},
+	)
+
 	err := http.ListenAndServe(cfg.ServerAddress, r)
 	logger.Fatalw("failed to start server", "error", err)
 }

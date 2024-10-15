@@ -71,6 +71,10 @@ func (fm *FileManager) GetNextUUID() (string, error) {
 	return nextUUID, nil
 }
 
+func (fm *FileManager) Ping(ctx context.Context) error {
+	return fmt.Errorf("ping is not supported for file storage")
+}
+
 func (fm *FileManager) Close(_ context.Context) error {
 	return fm.file.Close()
 }

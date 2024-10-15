@@ -152,5 +152,15 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusCreated)
 	res.Write(br)
+}
 
+func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
+	if err := h.Storage.Ping(req.Context()); err != nil {
+		http.Error(res, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+
+	// Если база данных доступна
+	res.WriteHeader(http.StatusOK)
+	res.Write([]byte("OK"))
 }

@@ -12,12 +12,12 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/types"
 )
 
-type FileManager struct {
+type Manager struct {
 	file       *os.File
 	URLStorage *[]types.URLData
 }
 
-func NewFileManager(cfg *config.Config) (*FileManager, error) {
+func NewFileManager(cfg *config.Config) (*Manager, error) {
 	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func NewFileManager(cfg *config.Config) (*FileManager, error) {
 
 	var storage []types.URLData
 
-	fm := &FileManager{
+	fm := &Manager{
 		file:       file,
 		URLStorage: &storage,
 	}
@@ -38,7 +38,7 @@ func NewFileManager(cfg *config.Config) (*FileManager, error) {
 	return fm, nil
 }
 
-func (fm *FileManager) GetOriginal(shortURL string) (string, error) {
+func (fm *Manager) GetOriginal(shortURL string) (string, error) {
 	for _, urlData := range *fm.URLStorage {
 		if urlData.ShortURL == shortURL {
 			return urlData.OriginalURL, nil
@@ -47,7 +47,7 @@ func (fm *FileManager) GetOriginal(shortURL string) (string, error) {
 	return "", fmt.Errorf("URL not found")
 }
 
-func (fm *FileManager) Put(urlData types.URLData) error {
+func (fm *Manager) Put(urlData types.URLData) error {
 	*fm.URLStorage = append(*fm.URLStorage, urlData)
 	err := fm.WriteURL(urlData)
 	if err != nil {
@@ -56,7 +56,7 @@ func (fm *FileManager) Put(urlData types.URLData) error {
 	return nil
 }
 
-func (fm *FileManager) Exists(shortURL string) (bool, error) {
+func (fm *Manager) Exists(shortURL string) (bool, error) {
 	for _, urlData := range *fm.URLStorage {
 		if urlData.ShortURL == shortURL {
 			return true, nil
@@ -65,21 +65,21 @@ func (fm *FileManager) Exists(shortURL string) (bool, error) {
 	return false, nil
 }
 
-func (fm *FileManager) GetNextUUID() (string, error) {
+func (fm *Manager) GetNextUUID() (string, error) {
 	// UUID — это индекс следующего элемента в слайсе
 	nextUUID := strconv.Itoa(len(*fm.URLStorage))
 	return nextUUID, nil
 }
 
-func (fm *FileManager) Ping(ctx context.Context) error {
+func (fm *Manager) Ping(ctx context.Context) error {
 	return fmt.Errorf("ping is not supported for file storage")
 }
 
-func (fm *FileManager) Close(_ context.Context) error {
+func (fm *Manager) Close(_ context.Context) error {
 	return fm.file.Close()
 }
 
-func (fm *FileManager) WriteURL(urlData types.URLData) error {
+func (fm *Manager) WriteURL(urlData types.URLData) error {
 	data, err := json.Marshal(&urlData)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (fm *FileManager) WriteURL(urlData types.URLData) error {
 	return err
 }
 
-func (fm *FileManager) LoadURLStorageFromFile() error {
+func (fm *Manager) LoadURLStorageFromFile() error {
 	fi, err := fm.file.Stat()
 	if err != nil {
 		return err

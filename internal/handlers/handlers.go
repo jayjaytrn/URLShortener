@@ -160,7 +160,5 @@ func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Если база данных доступна
 	res.WriteHeader(http.StatusOK)
-	res.Write([]byte("OK"))
 }

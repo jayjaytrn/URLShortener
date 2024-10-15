@@ -20,24 +20,28 @@ func GetConfig() *Config {
 
 	config := &Config{}
 
+	logger.Debug("parsing cmd")
+	flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "server listen address")
+	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "short URL base")
+	flag.StringVar(&config.FileStoragePath, "f", "storage.json", "file storage path")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "database DSN")
 	flag.Parse()
 
 	err := env.Parse(config)
 	if err != nil {
-		logger.Debug("Failed to parse environment variables:", err)
-
-		flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "server listen address")
-		flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "short URL base")
-		flag.StringVar(&config.FileStoragePath, "f", "", "file storage path")
-		flag.StringVar(&config.DatabaseDSN, "d", "", "database DSN")
-
-		if config.FileStoragePath == "" {
-			config.StorageType = "memory"
-			return config
-		}
-		config.StorageType = "file"
+		logger.Debug("failed to parse environment variables:", err)
 	}
 
-	config.StorageType = "db"
+	if config.DatabaseDSN != "" {
+		config.StorageType = "db"
+		return config
+	}
+
+	if config.FileStoragePath != "" {
+		config.StorageType = "file"
+		return config
+	}
+
+	config.StorageType = "memory"
 	return config
 }

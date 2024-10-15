@@ -52,7 +52,7 @@ func (m *Manager) Put(urlData types.URLData) error {
 	_, err := m.db.Exec("INSERT INTO urls (uuid, short_url, original_url) VALUES ($1, $2, $3)",
 		urlData.UUID, urlData.ShortURL, urlData.OriginalURL)
 	if err != nil {
-		fmt.Errorf("failed to insert URL: %w", err)
+		return fmt.Errorf("failed to insert URL: %w", err)
 	}
 	return nil
 }

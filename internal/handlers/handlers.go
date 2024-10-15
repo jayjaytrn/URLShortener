@@ -156,7 +156,7 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 
 func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	if err := h.Storage.Ping(req.Context()); err != nil {
-		http.Error(res, "Database connection error", http.StatusInternalServerError)
+		http.Error(res, "database connection error", http.StatusInternalServerError)
 		return
 	}
 

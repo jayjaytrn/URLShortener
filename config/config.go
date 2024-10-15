@@ -2,8 +2,8 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"github.com/caarlos0/env/v6"
+	"github.com/jayjaytrn/URLShortener/logging"
 )
 
 type Config struct {
@@ -15,13 +15,16 @@ type Config struct {
 }
 
 func GetConfig() *Config {
+	logger := logging.GetSugaredLogger()
+	defer logger.Sync()
+
 	config := &Config{}
 
 	flag.Parse()
 
 	err := env.Parse(config)
 	if err != nil {
-		fmt.Println("Failed to parse environment variables:", err)
+		logger.Debug("Failed to parse environment variables:", err)
 
 		flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "server listen address")
 		flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "short URL base")
@@ -29,10 +32,10 @@ func GetConfig() *Config {
 		flag.StringVar(&config.DatabaseDSN, "d", "", "database DSN")
 
 		if config.FileStoragePath == "" {
-			config.StorageType = "file"
+			config.StorageType = "memory"
 			return config
 		}
-		config.StorageType = "memory"
+		config.StorageType = "file"
 	}
 
 	config.StorageType = "db"

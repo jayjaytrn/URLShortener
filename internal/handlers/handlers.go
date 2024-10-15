@@ -3,12 +3,13 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
+
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/db"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
-	"io"
-	"net/http"
 )
 
 type (
@@ -47,7 +48,11 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	su := urlshort.GenerateShortURL()
+	su, err := urlshort.GenerateShortURL(h.Storage)
+	if err != nil {
+		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	storageLastIndex, err := h.Storage.GetNextUUID()
 	if err != nil {
@@ -113,7 +118,11 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	su := urlshort.GenerateShortURL()
+	su, err := urlshort.GenerateShortURL(h.Storage)
+	if err != nil {
+		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	storageLastIndex, err := h.Storage.GetNextUUID()
 	if err != nil {

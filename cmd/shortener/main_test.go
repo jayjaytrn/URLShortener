@@ -1,18 +1,32 @@
 package main
 
 import (
-	"github.com/jayjaytrn/URLShortener/internal/db/storage"
-	"github.com/jayjaytrn/URLShortener/internal/handlers"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/jayjaytrn/URLShortener/config"
+	"github.com/jayjaytrn/URLShortener/internal/db/filestorage"
+	"github.com/jayjaytrn/URLShortener/internal/handlers"
 )
 
 func Test_urlWaiter(t *testing.T) {
-	storage.StartNewManager()
+	cfg := config.GetConfig()
+
+	storage, err := filestorage.NewFileManager(cfg)
+	if err != nil {
+		t.Fatalf("failed to initialize file storage: %v", err)
+	}
+	defer storage.Close(context.Background())
+
+	handler := handlers.Handler{
+		Storage: storage,
+		Config:  cfg,
+	}
 
 	tests := []struct {
 		name         string
@@ -57,7 +71,7 @@ func Test_urlWaiter(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "http://localhost:8080/", io.NopCloser(strings.NewReader(tt.body)))
 			w := httptest.NewRecorder()
 
-			handlers.URLWaiter(w, req)
+			handler.URLWaiter(w, req)
 
 			res := w.Result()
 			defer res.Body.Close()
@@ -82,7 +96,18 @@ func Test_urlWaiter(t *testing.T) {
 }
 
 func Test_urlReturner(t *testing.T) {
-	storage.StartNewManager()
+	cfg := config.GetConfig()
+
+	storage, err := filestorage.NewFileManager(cfg)
+	if err != nil {
+		t.Fatalf("failed to initialize file storage: %v", err)
+	}
+	defer storage.Close(context.Background())
+
+	handler := handlers.Handler{
+		Storage: storage,
+		Config:  cfg,
+	}
 
 	tests := []struct {
 		name           string
@@ -112,9 +137,9 @@ func Test_urlReturner(t *testing.T) {
 			name:           "Non-existent Short URL",
 			method:         http.MethodGet,
 			path:           "/test",
-			expectedCode:   http.StatusBadRequest,
+			expectedCode:   http.StatusNotFound,
 			expectedHeader: "",
-			expectedBody:   "not found\n",
+			expectedBody:   "URL not found\n",
 		},
 	}
 
@@ -128,7 +153,7 @@ func Test_urlReturner(t *testing.T) {
 				postRequest := httptest.NewRequest("POST", "http://localhost:8080/", io.NopCloser(strings.NewReader("https://practicum.yandex.ru/")))
 				postResponse := httptest.NewRecorder()
 
-				handlers.URLWaiter(postResponse, postRequest)
+				handler.URLWaiter(postResponse, postRequest)
 
 				postResult := postResponse.Result()
 				defer postResult.Body.Close()
@@ -138,7 +163,7 @@ func Test_urlReturner(t *testing.T) {
 
 			getResponse := httptest.NewRecorder()
 
-			handlers.URLReturner(getResponse, req)
+			handler.URLReturner(getResponse, req)
 
 			getResult := getResponse.Result()
 			defer getResult.Body.Close()

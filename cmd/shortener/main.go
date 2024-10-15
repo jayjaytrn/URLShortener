@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/db"
@@ -12,7 +14,6 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"github.com/jayjaytrn/URLShortener/logging"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 func main() {

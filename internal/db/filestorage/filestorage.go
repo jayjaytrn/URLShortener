@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jayjaytrn/URLShortener/config"
-	"github.com/jayjaytrn/URLShortener/internal/types"
 	"os"
 	"strconv"
+
+	"github.com/jayjaytrn/URLShortener/config"
+	"github.com/jayjaytrn/URLShortener/internal/types"
 )
 
 type FileManager struct {
@@ -55,8 +56,13 @@ func (fm *FileManager) Put(urlData types.URLData) error {
 	return nil
 }
 
-func (fm *FileManager) Exists(_ string) (bool, error) {
-	return true, nil
+func (fm *FileManager) Exists(shortURL string) (bool, error) {
+	for _, urlData := range *fm.URLStorage {
+		if urlData.ShortURL == shortURL {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (fm *FileManager) GetNextUUID() (string, error) {

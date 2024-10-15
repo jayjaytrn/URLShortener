@@ -1,13 +1,15 @@
 package urlshort
 
 import (
-	"github.com/jayjaytrn/URLShortener/internal/db/storage"
+	"fmt"
 	"math/rand"
 	"regexp"
 	"time"
+
+	"github.com/jayjaytrn/URLShortener/internal/db"
 )
 
-func GenerateShortURL() string {
+func GenerateShortURL(storage db.ShortenerStorage) (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const keyLength = 8
 
@@ -19,16 +21,16 @@ func GenerateShortURL() string {
 			shortURL[i] = charset[rand.Intn(len(charset))]
 		}
 
-		oldURLs := make(map[string]interface{})
-		for _, urlData := range storage.URLStorage {
-			oldURLs[urlData.ShortURL] = struct{}{}
+		exists, err := storage.Exists(string(shortURL))
+		if err != nil {
+			return "", fmt.Errorf("failed to check if URL exists: %w", err)
 		}
 
-		if _, exists := oldURLs[string(shortURL)]; !exists {
+		if !exists {
 			break
 		}
 	}
-	return string(shortURL)
+	return string(shortURL), nil
 }
 
 func ValidateURL(url string) bool {

@@ -25,7 +25,6 @@ func GetConfig() *Config {
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "short URL base")
 	flag.StringVar(&config.FileStoragePath, "f", "storage.json", "file storage path")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database DSN")
-	flag.Parse()
 
 	err := env.Parse(config)
 	if err != nil {

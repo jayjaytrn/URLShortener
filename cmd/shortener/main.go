@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"github.com/jayjaytrn/URLShortener/internal/db"
 	"net/http"
 
@@ -14,8 +13,6 @@ import (
 )
 
 func main() {
-	flag.Parse()
-
 	logger := logging.GetSugaredLogger()
 	defer logger.Sync()
 

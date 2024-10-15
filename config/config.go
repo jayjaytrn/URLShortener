@@ -20,7 +20,6 @@ func GetConfig() *Config {
 
 	config := &Config{}
 
-	logger.Debug("parsing cmd")
 	flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "server listen address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "short URL base")
 	flag.StringVar(&config.FileStoragePath, "f", "storage.json", "file storage path")

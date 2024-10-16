@@ -3,25 +3,22 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/jayjaytrn/URLShortener/config"
-	"github.com/jayjaytrn/URLShortener/internal/storage"
+	"github.com/jayjaytrn/URLShortener/internal/db"
+	"github.com/jayjaytrn/URLShortener/internal/db/postgres"
+	"github.com/jayjaytrn/URLShortener/internal/types"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
 	"io"
 	"net/http"
-	"strconv"
 )
 
-type (
-	ShortenRequest struct {
-		URL string `json:"url"`
-	}
+type Handler struct {
+	Storage db.ShortenerStorage
+	Config  *config.Config
+}
 
-	ShortenResponse struct {
-		Result string `json:"result"`
-	}
-)
-
-func URLWaiter(res http.ResponseWriter, req *http.Request) {
+func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(res, "only POST method is allowed", http.StatusBadRequest)
 		return
@@ -42,43 +39,56 @@ func URLWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	su := urlshort.GenerateShortURL()
+	su, err := urlshort.GenerateShortURL(h.Storage)
+	if err != nil {
+		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	storageLastIndex := len(storage.URLStorage)
-	us := storage.URLData{
-		UUID:        strconv.Itoa(storageLastIndex),
+	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	storage.WriteManager.AddURL(us)
 
-	r := config.Config.BaseURL + "/" + su
+	err = h.Storage.Put(urlData)
+	if err != nil {
+		var originalExistErr *postgres.OriginalExistError
+		if errors.As(err, &originalExistErr) {
+			r := h.Config.BaseURL + "/" + originalExistErr.ShortURL
+			res.Header().Set("content-type", "text/plain")
+			res.WriteHeader(http.StatusConflict)
+			res.Write([]byte(r))
+			return
+		}
+		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+		return
+	}
+
+	r := h.Config.BaseURL + "/" + su
 	res.Header().Set("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(r))
 }
 
-func URLReturner(res http.ResponseWriter, req *http.Request) {
+func (h *Handler) URLReturner(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		http.Error(res, "only GET method is allowed", http.StatusBadRequest)
 		return
 	}
+
 	shortURL := req.URL.Path[len("/"):]
 
-	originalURL := ""
-	for _, urlData := range storage.URLStorage {
-		if urlData.ShortURL == shortURL {
-			originalURL = urlData.OriginalURL
-			res.Header().Set("Location", originalURL)
-			res.WriteHeader(http.StatusTemporaryRedirect)
-			return
-		}
+	originalURL, err := h.Storage.GetOriginal(shortURL)
+	if err != nil {
+		http.Error(res, "URL not found", http.StatusNotFound)
+		return
 	}
 
-	http.Error(res, "not found", http.StatusBadRequest)
+	res.Header().Set("Location", originalURL)
+	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func Shorten(res http.ResponseWriter, req *http.Request) {
+func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
@@ -86,7 +96,7 @@ func Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var shortenRequest ShortenRequest
+	var shortenRequest types.ShortenRequest
 	err = json.Unmarshal(buf.Bytes(), &shortenRequest)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
@@ -100,18 +110,41 @@ func Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	su := urlshort.GenerateShortURL()
+	su, err := urlshort.GenerateShortURL(h.Storage)
+	if err != nil {
+		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	storageLastIndex := len(storage.URLStorage)
-	us := storage.URLData{
-		UUID:        strconv.Itoa(storageLastIndex),
+	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	storage.WriteManager.AddURL(us)
+	err = h.Storage.Put(urlData)
+	if err != nil {
+		var originalExistErr *postgres.OriginalExistError
+		if errors.As(err, &originalExistErr) {
+			r := h.Config.BaseURL + "/" + originalExistErr.ShortURL
+			shortenResponse := types.ShortenResponse{
+				Result: r,
+			}
+			br, err := json.Marshal(shortenResponse)
+			if err != nil {
+				http.Error(res, err.Error(), http.StatusBadRequest)
+				return
+			}
 
-	r := config.Config.BaseURL + "/" + su
-	shortenResponse := ShortenResponse{
+			res.Header().Set("Content-Type", "application/json")
+			res.WriteHeader(http.StatusConflict)
+			res.Write(br)
+			return
+		}
+		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+		return
+	}
+
+	r := h.Config.BaseURL + "/" + su
+	shortenResponse := types.ShortenResponse{
 		Result: r,
 	}
 	br, err := json.Marshal(shortenResponse)
@@ -123,5 +156,56 @@ func Shorten(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusCreated)
 	res.Write(br)
+}
 
+func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(req.Body)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var batchRequest []types.ShortenBatchRequest
+	err = json.Unmarshal(buf.Bytes(), &batchRequest)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	valid := urlshort.ValidateBatchRequestURLs(batchRequest)
+	if !valid {
+		http.Error(res, "wrong parameters", http.StatusBadRequest)
+		return
+	}
+
+	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Config, h.Storage, batchRequest)
+	if err != nil {
+		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = h.Storage.PutBatch(req.Context(), batchData)
+	if err != nil {
+		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+	}
+
+	br, err := json.Marshal(batchResponse)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+	res.Write(br)
+}
+
+func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
+	if err := h.Storage.Ping(req.Context()); err != nil {
+		http.Error(res, "database connection error", http.StatusInternalServerError)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
 }

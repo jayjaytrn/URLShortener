@@ -1,40 +1,47 @@
 package main
 
 import (
-	"flag"
+	"context"
+	"github.com/jayjaytrn/URLShortener/internal/db"
+	"go.uber.org/zap"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/handlers"
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
-	"github.com/jayjaytrn/URLShortener/internal/storage"
 	"github.com/jayjaytrn/URLShortener/logging"
-	"net/http"
 )
 
 func main() {
-	flag.Parse()
+	logger := logging.GetSugaredLogger()
+	defer logger.Sync()
 
-	sugar := logging.GetSugaredLogger()
-	defer sugar.Sync()
+	ctx := context.Background()
 
-	err := storage.LoadURLStorageFromFile()
-	if err != nil {
-		panic(err)
+	cfg := config.GetConfig()
+
+	s := db.GetStorage(cfg, logger)
+	defer s.Close(ctx)
+
+	h := handlers.Handler{
+		Config:  cfg,
+		Storage: s,
 	}
 
-	err = storage.StartNewManager()
-	if err != nil {
-		panic(err)
-	}
+	r := initRouter(h, logger)
 
-	defer storage.WriteManager.Close()
+	err := http.ListenAndServe(cfg.ServerAddress, r)
+	logger.Fatalw("failed to start server", "error", err)
+}
 
+func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
 	r := chi.NewRouter()
 	r.Post(`/`,
 		func(w http.ResponseWriter, r *http.Request) {
 			middleware.Conveyor(
-				http.HandlerFunc(handlers.URLWaiter),
-				sugar,
+				http.HandlerFunc(h.URLWaiter),
+				logger,
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
 				middleware.ReadWithCompression,
@@ -44,8 +51,20 @@ func main() {
 	r.Post(`/api/shorten`,
 		func(w http.ResponseWriter, r *http.Request) {
 			middleware.Conveyor(
-				http.HandlerFunc(handlers.Shorten),
-				sugar,
+				http.HandlerFunc(h.Shorten),
+				logger,
+				middleware.WithLogging,
+				middleware.WriteWithCompression,
+				middleware.ReadWithCompression,
+			).ServeHTTP(w, r)
+		},
+	)
+
+	r.Post(`/api/shorten/batch`,
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.Conveyor(
+				http.HandlerFunc(h.ShortenBatch),
+				logger,
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
 				middleware.ReadWithCompression,
@@ -56,16 +75,24 @@ func main() {
 	r.Get(`/{id}`,
 		func(w http.ResponseWriter, r *http.Request) {
 			middleware.Conveyor(
-				http.HandlerFunc(handlers.URLReturner),
-				sugar,
+				http.HandlerFunc(h.URLReturner),
+				logger,
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
 			).ServeHTTP(w, r)
 		},
 	)
 
-	err = http.ListenAndServe(config.Config.ServerAddress, r)
-	if err != nil {
-		panic(err)
-	}
+	r.Get(`/ping`,
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.Conveyor(
+				http.HandlerFunc(h.Ping),
+				logger,
+				middleware.WithLogging,
+				middleware.WriteWithCompression,
+			).ServeHTTP(w, r)
+		},
+	)
+
+	return r
 }

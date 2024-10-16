@@ -36,6 +36,18 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 	return manager, nil
 }
 
+func (m *Manager) GetShort(originalURL string) (string, error) {
+	var shortURL string
+	err := m.db.QueryRow("SELECT short_url FROM shortener WHERE original_url = $1", originalURL).Scan(&shortURL)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("URL not found")
+		}
+		return "", fmt.Errorf("failed to get short URL: %w", err)
+	}
+	return originalURL, nil
+}
+
 func (m *Manager) GetOriginal(shortURL string) (string, error) {
 	var originalURL string
 	err := m.db.QueryRow("SELECT original_url FROM shortener WHERE short_url = $1", shortURL).Scan(&originalURL)
@@ -49,13 +61,19 @@ func (m *Manager) GetOriginal(shortURL string) (string, error) {
 }
 
 // Put добавляет новую запись в базу данных
-func (m *Manager) Put(urlData types.URLData) error {
-	_, err := m.db.Exec("INSERT INTO shortener (short_url, original_url) VALUES ($1, $2)",
+func (m *Manager) Put(urlData types.URLData) (bool, error) {
+	result, err := m.db.Exec("INSERT INTO shortener (short_url, original_url) VALUES ($1, $2) ON CONFLICT (original_url) DO NOTHING",
 		urlData.ShortURL, urlData.OriginalURL)
 	if err != nil {
-		return fmt.Errorf("failed to insert URL: %w", err)
+		return false, fmt.Errorf("failed to insert URL: %w", err)
 	}
-	return nil
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	return rowsAffected > 0, nil
 }
 
 func (m *Manager) PutBatch(ctx context.Context, batchData []types.URLData) error {
@@ -102,7 +120,7 @@ func (m *Manager) createShortenerTable() error {
 	CREATE TABLE IF NOT EXISTS shortener (
 		uuid BIGSERIAL PRIMARY KEY,
 		short_url VARCHAR(255) NOT NULL UNIQUE,
-		original_url TEXT NOT NULL
+		original_url TEXT NOT NULL UNIQUE
 	);`
 
 	_, err := m.db.Exec(query)

@@ -44,6 +44,15 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 	return fm, nil
 }
 
+func (fm *Manager) GetShort(originalURL string) (string, error) {
+	for _, urlData := range *fm.FileStorage {
+		if urlData.OriginalURL == originalURL {
+			return urlData.ShortURL, nil
+		}
+	}
+	return "", fmt.Errorf("URL not found")
+}
+
 func (fm *Manager) GetOriginal(shortURL string) (string, error) {
 	for _, urlData := range *fm.FileStorage {
 		if urlData.ShortURL == shortURL {
@@ -53,7 +62,7 @@ func (fm *Manager) GetOriginal(shortURL string) (string, error) {
 	return "", fmt.Errorf("URL not found")
 }
 
-func (fm *Manager) Put(urlData types.URLData) error {
+func (fm *Manager) Put(urlData types.URLData) (bool, error) {
 	// длина стораджа будет на 1 больше чем его UUID значение
 	storageLastIndex := len(*fm.FileStorage)
 	data := StorageData{
@@ -64,14 +73,14 @@ func (fm *Manager) Put(urlData types.URLData) error {
 	*fm.FileStorage = append(*fm.FileStorage, data)
 	err := fm.WriteURL(urlData)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return nil
+	return true, nil
 }
 
 func (fm *Manager) PutBatch(_ context.Context, batchData []types.URLData) error {
 	for _, urlData := range batchData {
-		err := fm.Put(urlData)
+		_, err := fm.Put(urlData)
 		if err != nil {
 			return err
 		}

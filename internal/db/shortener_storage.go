@@ -9,8 +9,10 @@ import (
 type ShortenerStorage interface {
 	// GetOriginal возвращает оригинальный URL по короткому URL
 	GetOriginal(shortURL string) (string, error)
-	// Put добавляет новую запись в БД
-	Put(urlData types.URLData) error
+	// GetShort возвращает короткий URL по оригинальному URL
+	GetShort(shortURL string) (string, error)
+	// Put добавляет новую запись в БД, возвращает true если запись была добавлена
+	Put(urlData types.URLData) (bool, error)
 	// Exists возвращает true если запись найдена
 	Exists(url string) (bool, error)
 	// PutBatch добавляет пачку новых записей в БД, если одна из записей не удалась, не записывается вся пачка

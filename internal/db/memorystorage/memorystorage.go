@@ -17,18 +17,27 @@ func NewManager(_ *config.Config) (*Manager, error) {
 	return manager, nil
 }
 
+func (m *Manager) GetShort(originalURL string) (string, error) {
+	for shortURL, url := range m.RelatesURLs {
+		if url == originalURL {
+			return shortURL, nil
+		}
+	}
+	return "", fmt.Errorf("short URL not found for the original URL: %s", originalURL)
+}
+
 func (m *Manager) GetOriginal(shortURL string) (string, error) {
 	return m.RelatesURLs[shortURL], nil
 }
 
-func (m *Manager) Put(urlData types.URLData) error {
+func (m *Manager) Put(urlData types.URLData) (bool, error) {
 	m.RelatesURLs[urlData.ShortURL] = urlData.OriginalURL
-	return nil
+	return true, nil
 }
 
 func (m *Manager) PutBatch(_ context.Context, batchData []types.URLData) error {
 	for _, urlData := range batchData {
-		err := m.Put(urlData)
+		_, err := m.Put(urlData)
 		if err != nil {
 			return err
 		}

@@ -49,9 +49,21 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 		ShortURL:    su,
 	}
 
-	err = h.Storage.Put(urlData)
+	success, err := h.Storage.Put(urlData)
 	if err != nil {
 		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+	}
+
+	if !success {
+		shortURL, err := h.Storage.GetShort(url)
+		if err != nil {
+			http.Error(res, "error when trying to get short URL: "+err.Error(), http.StatusInternalServerError)
+		}
+		r := h.Config.BaseURL + "/" + shortURL
+
+		res.Header().Set("content-type", "text/plain")
+		res.WriteHeader(http.StatusConflict)
+		res.Write([]byte(r))
 	}
 
 	r := h.Config.BaseURL + "/" + su
@@ -112,9 +124,29 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	err = h.Storage.Put(urlData)
+	success, err := h.Storage.Put(urlData)
 	if err != nil {
 		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+	}
+
+	if !success {
+		shortURL, err := h.Storage.GetShort(url)
+		if err != nil {
+			http.Error(res, "error when trying to get short URL: "+err.Error(), http.StatusInternalServerError)
+		}
+		r := h.Config.BaseURL + "/" + shortURL
+		shortenResponse := types.ShortenResponse{
+			Result: r,
+		}
+		br, err := json.Marshal(shortenResponse)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(http.StatusConflict)
+		res.Write(br)
 	}
 
 	r := h.Config.BaseURL + "/" + su

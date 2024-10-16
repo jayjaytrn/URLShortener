@@ -11,6 +11,8 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/db"
 )
 
+var urlRegex = regexp.MustCompile(`^https?://([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(/.*)?$`)
+
 func GenerateShortURL(storage db.ShortenerStorage) (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const keyLength = 8
@@ -75,10 +77,7 @@ func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch [
 }
 
 func ValidateURL(url string) bool {
-	regex := `^https?://([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(/.*)?$`
-
-	m, _ := regexp.MatchString(regex, url)
-	return m
+	return urlRegex.MatchString(url)
 }
 
 func ValidateBatchRequestURLs(batch []types.ShortenBatchRequest) bool {

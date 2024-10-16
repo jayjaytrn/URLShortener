@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/jayjaytrn/URLShortener/internal/db"
+	"go.uber.org/zap"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -28,6 +29,13 @@ func main() {
 		Storage: s,
 	}
 
+	r := initRouter(h, logger)
+
+	err := http.ListenAndServe(cfg.ServerAddress, r)
+	logger.Fatalw("failed to start server", "error", err)
+}
+
+func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
 	r := chi.NewRouter()
 	r.Post(`/`,
 		func(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +94,5 @@ func main() {
 		},
 	)
 
-	err := http.ListenAndServe(cfg.ServerAddress, r)
-	logger.Fatalw("failed to start server", "error", err)
+	return r
 }

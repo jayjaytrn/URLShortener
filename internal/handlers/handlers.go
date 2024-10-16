@@ -76,16 +76,14 @@ func (h *Handler) URLReturner(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	shortURL := req.URL.Path[len("/"):] // Получаем короткий URL из пути
+	shortURL := req.URL.Path[len("/"):]
 
-	// Получаем оригинальный URL
 	originalURL, err := h.Storage.GetOriginal(shortURL)
 	if err != nil {
 		http.Error(res, "URL not found", http.StatusNotFound)
 		return
 	}
 
-	// Перенаправляем на оригинальный URL
 	res.Header().Set("Location", originalURL)
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }

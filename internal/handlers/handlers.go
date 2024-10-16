@@ -61,6 +61,7 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+		return
 	}
 
 	r := h.Config.BaseURL + "/" + su
@@ -123,7 +124,25 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 	}
 	err = h.Storage.Put(urlData)
 	if err != nil {
+		var originalExistErr *postgres.OriginalExistError
+		if errors.As(err, &originalExistErr) {
+			r := h.Config.BaseURL + "/" + originalExistErr.ShortURL
+			shortenResponse := types.ShortenResponse{
+				Result: r,
+			}
+			br, err := json.Marshal(shortenResponse)
+			if err != nil {
+				http.Error(res, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			res.Header().Set("Content-Type", "application/json")
+			res.WriteHeader(http.StatusConflict)
+			res.Write(br)
+			return
+		}
 		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+		return
 	}
 
 	r := h.Config.BaseURL + "/" + su

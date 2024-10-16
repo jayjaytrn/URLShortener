@@ -3,13 +3,14 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"io"
-	"net/http"
-
+	"errors"
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/db"
+	"github.com/jayjaytrn/URLShortener/internal/db/postgres"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
+	"io"
+	"net/http"
 )
 
 type Handler struct {
@@ -49,21 +50,17 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 		ShortURL:    su,
 	}
 
-	success, err := h.Storage.Put(urlData)
+	err = h.Storage.Put(urlData)
 	if err != nil {
-		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
-	}
-
-	if !success {
-		shortURL, err := h.Storage.GetShort(url)
-		if err != nil {
-			http.Error(res, "error when trying to get short URL: "+err.Error(), http.StatusInternalServerError)
+		var originalExistErr *postgres.OriginalExistError
+		if errors.As(err, &originalExistErr) {
+			r := h.Config.BaseURL + "/" + originalExistErr.ShortURL
+			res.Header().Set("content-type", "text/plain")
+			res.WriteHeader(http.StatusConflict)
+			res.Write([]byte(r))
+			return
 		}
-		r := h.Config.BaseURL + "/" + shortURL
-
-		res.Header().Set("content-type", "text/plain")
-		res.WriteHeader(http.StatusConflict)
-		res.Write([]byte(r))
+		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
 	}
 
 	r := h.Config.BaseURL + "/" + su
@@ -124,29 +121,9 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	success, err := h.Storage.Put(urlData)
+	err = h.Storage.Put(urlData)
 	if err != nil {
 		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
-	}
-
-	if !success {
-		shortURL, err := h.Storage.GetShort(url)
-		if err != nil {
-			http.Error(res, "error when trying to get short URL: "+err.Error(), http.StatusInternalServerError)
-		}
-		r := h.Config.BaseURL + "/" + shortURL
-		shortenResponse := types.ShortenResponse{
-			Result: r,
-		}
-		br, err := json.Marshal(shortenResponse)
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		res.Header().Set("Content-Type", "application/json")
-		res.WriteHeader(http.StatusConflict)
-		res.Write(br)
 	}
 
 	r := h.Config.BaseURL + "/" + su

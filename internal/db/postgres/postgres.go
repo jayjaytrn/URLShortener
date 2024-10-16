@@ -10,6 +10,14 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/types"
 )
 
+type OriginalExistError struct {
+	ShortURL string
+}
+
+func (e *OriginalExistError) Error() string {
+	return fmt.Sprintf("original URL already exists, short URL for it is: %s", e.ShortURL)
+}
+
 type Manager struct {
 	db *sql.DB
 }
@@ -36,18 +44,6 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 	return manager, nil
 }
 
-func (m *Manager) GetShort(originalURL string) (string, error) {
-	var shortURL string
-	err := m.db.QueryRow("SELECT short_url FROM shortener WHERE original_url = $1", originalURL).Scan(&shortURL)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", fmt.Errorf("URL not found")
-		}
-		return "", fmt.Errorf("failed to get short URL: %w", err)
-	}
-	return originalURL, nil
-}
-
 func (m *Manager) GetOriginal(shortURL string) (string, error) {
 	var originalURL string
 	err := m.db.QueryRow("SELECT original_url FROM shortener WHERE short_url = $1", shortURL).Scan(&originalURL)
@@ -61,19 +57,28 @@ func (m *Manager) GetOriginal(shortURL string) (string, error) {
 }
 
 // Put добавляет новую запись в базу данных
-func (m *Manager) Put(urlData types.URLData) (bool, error) {
-	result, err := m.db.Exec("INSERT INTO shortener (short_url, original_url) VALUES ($1, $2) ON CONFLICT (original_url) DO NOTHING",
-		urlData.ShortURL, urlData.OriginalURL)
+func (m *Manager) Put(urlData types.URLData) error {
+	var alreadyExistedShortURL string
+
+	err := m.db.QueryRow(`
+        WITH ins AS (
+            INSERT INTO shortener (short_url, original_url)
+            VALUES ($1, $2)
+            ON CONFLICT (original_url) DO NOTHING
+        )
+        SELECT short_url FROM shortener WHERE original_url = $2;
+    `, urlData.ShortURL, urlData.OriginalURL).Scan(&alreadyExistedShortURL)
 	if err != nil {
-		return false, fmt.Errorf("failed to insert URL: %w", err)
+		if !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("failed to insert URL: %w", err)
+		}
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return false, fmt.Errorf("failed to get affected rows: %w", err)
+	if alreadyExistedShortURL != "" {
+		return &OriginalExistError{ShortURL: alreadyExistedShortURL}
 	}
 
-	return rowsAffected > 0, nil
+	return nil
 }
 
 func (m *Manager) PutBatch(ctx context.Context, batchData []types.URLData) error {

@@ -42,29 +42,29 @@ func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch [
 	for n := 0; n < len(batch); {
 		// Генерируем короткий URL
 		// проверяем есть ли такой в БД
-		shortUrl, err := GenerateShortURL(storage)
+		shortURL, err := GenerateShortURL(storage)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		// Проверяем, существует ли уже такой короткий URL среди сгенерированных новых
-		if _, ok := newShorts[shortUrl]; ok {
+		if _, ok := newShorts[shortURL]; ok {
 			// Если такой URL уже есть, продолжаем цикл с того же индекса
 			continue
 		}
 
 		// Добавляем новый короткий URL
-		newShorts[shortUrl] = batch[n]
+		newShorts[shortURL] = batch[n]
 
 		// Формируем батч для ответа клиенту
 		batchResponse = append(batchResponse, types.ShortenBatchResponse{
 			CorrelationID: batch[n].CorrelationID,
-			ShortURL:      cfg.BaseURL + "/" + shortUrl,
+			ShortURL:      cfg.BaseURL + "/" + shortURL,
 		})
 
 		// Формируем данные дял записи в БД
 		urlData = append(urlData, types.URLData{
-			ShortURL:    cfg.BaseURL + "/" + shortUrl,
+			ShortURL:    cfg.BaseURL + "/" + shortURL,
 			OriginalURL: batch[n].OriginalURL,
 		})
 

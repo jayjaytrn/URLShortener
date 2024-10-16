@@ -59,7 +59,7 @@ func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch [
 		// Формируем батч для ответа клиенту
 		batchResponse = append(batchResponse, types.ShortenBatchResponse{
 			CorrelationID: batch[n].CorrelationID,
-			ShortURL:      shortURL,
+			ShortURL:      cfg.BaseURL + "/" + shortURL,
 		})
 
 		// Формируем данные дял записи в БД

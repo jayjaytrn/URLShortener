@@ -12,9 +12,15 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/types"
 )
 
+type StorageData struct {
+	UUID        string `json:"uuid"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
 type Manager struct {
-	file       *os.File
-	URLStorage *[]types.URLData
+	file        *os.File
+	FileStorage *[]StorageData
 }
 
 func NewManager(cfg *config.Config) (*Manager, error) {
@@ -23,11 +29,11 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		return nil, err
 	}
 
-	var storage []types.URLData
+	var storage []StorageData
 
 	fm := &Manager{
-		file:       file,
-		URLStorage: &storage,
+		file:        file,
+		FileStorage: &storage,
 	}
 
 	err = fm.LoadURLStorageFromFile()
@@ -39,7 +45,7 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 }
 
 func (fm *Manager) GetOriginal(shortURL string) (string, error) {
-	for _, urlData := range *fm.URLStorage {
+	for _, urlData := range *fm.FileStorage {
 		if urlData.ShortURL == shortURL {
 			return urlData.OriginalURL, nil
 		}
@@ -48,7 +54,14 @@ func (fm *Manager) GetOriginal(shortURL string) (string, error) {
 }
 
 func (fm *Manager) Put(urlData types.URLData) error {
-	*fm.URLStorage = append(*fm.URLStorage, urlData)
+	// длина стораджа будет на 1 больше чем его UUID значение
+	storageLastIndex := len(*fm.FileStorage)
+	data := StorageData{
+		UUID:        strconv.Itoa(storageLastIndex),
+		ShortURL:    urlData.ShortURL,
+		OriginalURL: urlData.OriginalURL,
+	}
+	*fm.FileStorage = append(*fm.FileStorage, data)
 	err := fm.WriteURL(urlData)
 	if err != nil {
 		return err
@@ -56,19 +69,23 @@ func (fm *Manager) Put(urlData types.URLData) error {
 	return nil
 }
 
+func (fm *Manager) PutBatch(_ context.Context, batchData []types.URLData) error {
+	for _, urlData := range batchData {
+		err := fm.Put(urlData)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (fm *Manager) Exists(shortURL string) (bool, error) {
-	for _, urlData := range *fm.URLStorage {
+	for _, urlData := range *fm.FileStorage {
 		if urlData.ShortURL == shortURL {
 			return true, nil
 		}
 	}
 	return false, nil
-}
-
-func (fm *Manager) GetNextUUID() (string, error) {
-	// UUID — это индекс следующего элемента в слайсе
-	nextUUID := strconv.Itoa(len(*fm.URLStorage))
-	return nextUUID, nil
 }
 
 func (fm *Manager) Ping(ctx context.Context) error {
@@ -101,7 +118,7 @@ func (fm *Manager) LoadURLStorageFromFile() error {
 	}
 
 	if fi.Size() == 0 {
-		*fm.URLStorage = []types.URLData{}
+		*fm.FileStorage = []StorageData{}
 		return nil
 	}
 
@@ -113,12 +130,12 @@ func (fm *Manager) LoadURLStorageFromFile() error {
 
 	var scanner = bufio.NewScanner(fm.file)
 	for scanner.Scan() {
-		var data types.URLData
+		var data StorageData
 		line := scanner.Bytes()
 		if err = json.Unmarshal(line, &data); err != nil {
 			return err
 		}
-		*fm.URLStorage = append(*fm.URLStorage, data)
+		*fm.FileStorage = append(*fm.FileStorage, data)
 	}
 
 	if err = scanner.Err(); err != nil {

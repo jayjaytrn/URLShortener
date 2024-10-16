@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
-
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/types"
@@ -52,12 +50,32 @@ func (m *Manager) GetOriginal(shortURL string) (string, error) {
 
 // Put добавляет новую запись в базу данных
 func (m *Manager) Put(urlData types.URLData) error {
-	_, err := m.db.Exec("INSERT INTO shortener (uuid, short_url, original_url) VALUES ($1, $2, $3)",
-		urlData.UUID, urlData.ShortURL, urlData.OriginalURL)
+	_, err := m.db.Exec("INSERT INTO shortener (short_url, original_url) VALUES ($1, $2)",
+		urlData.ShortURL, urlData.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("failed to insert URL: %w", err)
 	}
 	return nil
+}
+
+func (m *Manager) PutBatch(ctx context.Context, batchData []types.URLData) error {
+	tx, err := m.db.Begin()
+	if err != nil {
+		return err
+	}
+	for _, b := range batchData {
+		// все изменения записываются в транзакцию
+		_, err := tx.ExecContext(ctx,
+			"INSERT INTO shortener (short_url, original_url) VALUES ($1, $2)",
+			b.ShortURL, b.OriginalURL)
+		if err != nil {
+			// если ошибка, то откатываем изменения
+			tx.Rollback()
+			return err
+		}
+	}
+	// завершаем транзакцию
+	return tx.Commit()
 }
 
 // Exists проверяет, существует ли короткий URL в базе данных
@@ -67,18 +85,6 @@ func (m *Manager) Exists(shortURL string) (bool, error) {
 		return false, fmt.Errorf("failed to check if URL exists: %w", err)
 	}
 	return exists, nil
-}
-
-func (m *Manager) GetNextUUID() (string, error) {
-	var count int
-	err := m.db.QueryRow("SELECT COUNT(*) FROM shortener").Scan(&count)
-	if err != nil {
-		return "", fmt.Errorf("failed to get next UUID: %w", err)
-	}
-
-	// UUID — это текущее количество записей, увеличенное на 1
-	nextUUID := strconv.Itoa(count)
-	return nextUUID, nil
 }
 
 func (m *Manager) Ping(ctx context.Context) error {

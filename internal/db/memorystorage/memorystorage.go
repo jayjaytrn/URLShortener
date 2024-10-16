@@ -26,6 +26,16 @@ func (m *Manager) Put(urlData types.URLData) error {
 	return nil
 }
 
+func (m *Manager) PutBatch(_ context.Context, batchData []types.URLData) error {
+	for _, urlData := range batchData {
+		err := m.Put(urlData)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Exists возвращает true если запись найдена
 func (m *Manager) Exists(url string) (bool, error) {
 	_, ok := m.RelatesURLs[url]
@@ -33,11 +43,6 @@ func (m *Manager) Exists(url string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-// GetNextUUID возвращает следующий доступный UUID для новой записи
-func (m *Manager) GetNextUUID() (string, error) {
-	return "1", nil
 }
 
 // Close закрывает соединение с базой

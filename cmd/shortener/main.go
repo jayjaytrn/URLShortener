@@ -52,6 +52,18 @@ func main() {
 		},
 	)
 
+	r.Post(`/api/shorten/batch`,
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.Conveyor(
+				http.HandlerFunc(h.Shorten),
+				logger,
+				middleware.WithLogging,
+				middleware.WriteWithCompression,
+				middleware.ReadWithCompression,
+			).ServeHTTP(w, r)
+		},
+	)
+
 	r.Get(`/{id}`,
 		func(w http.ResponseWriter, r *http.Request) {
 			middleware.Conveyor(

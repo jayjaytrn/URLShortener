@@ -12,16 +12,6 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
 )
 
-type (
-	ShortenRequest struct {
-		URL string `json:"url"`
-	}
-
-	ShortenResponse struct {
-		Result string `json:"result"`
-	}
-)
-
 type Handler struct {
 	Storage db.ShortenerStorage
 	Config  *config.Config
@@ -54,17 +44,11 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	storageLastIndex, err := h.Storage.GetNextUUID()
-	if err != nil {
-		http.Error(res, "could not generate UUID", http.StatusInternalServerError)
-		return
-	}
 	urlData := types.URLData{
-		UUID:        storageLastIndex,
 		OriginalURL: url,
 		ShortURL:    su,
 	}
-	//storage.WriteManager.Put(us)
+
 	err = h.Storage.Put(urlData)
 	if err != nil {
 		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
@@ -104,7 +88,7 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var shortenRequest ShortenRequest
+	var shortenRequest types.ShortenRequest
 	err = json.Unmarshal(buf.Bytes(), &shortenRequest)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
@@ -124,13 +108,7 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	storageLastIndex, err := h.Storage.GetNextUUID()
-	if err != nil {
-		http.Error(res, "could not generate UUID", http.StatusInternalServerError)
-		return
-	}
 	urlData := types.URLData{
-		UUID:        storageLastIndex,
 		OriginalURL: url,
 		ShortURL:    su,
 	}
@@ -140,10 +118,53 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 	}
 
 	r := h.Config.BaseURL + "/" + su
-	shortenResponse := ShortenResponse{
+	shortenResponse := types.ShortenResponse{
 		Result: r,
 	}
 	br, err := json.Marshal(shortenResponse)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+	res.Write(br)
+}
+
+func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(req.Body)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var batchRequest []types.ShortenBatchRequest
+	err = json.Unmarshal(buf.Bytes(), &batchRequest)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	valid := urlshort.ValidateBatchRequestURLs(batchRequest)
+	if !valid {
+		http.Error(res, "wrong parameters", http.StatusBadRequest)
+		return
+	}
+
+	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Storage, batchRequest)
+	if err != nil {
+		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = h.Storage.PutBatch(req.Context(), batchData)
+	if err != nil {
+		http.Error(res, "error when trying to put data in storage", http.StatusInternalServerError)
+	}
+
+	br, err := json.Marshal(batchResponse)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return

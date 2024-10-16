@@ -153,7 +153,7 @@ func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Storage, batchRequest)
+	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Config, h.Storage, batchRequest)
 	if err != nil {
 		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
 		return

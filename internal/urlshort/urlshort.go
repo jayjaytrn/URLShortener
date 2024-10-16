@@ -2,6 +2,7 @@ package urlshort
 
 import (
 	"fmt"
+	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 	"math/rand"
 	"regexp"
@@ -34,9 +35,9 @@ func GenerateShortURL(storage db.ShortenerStorage) (string, error) {
 	return string(shortURL), nil
 }
 
-func GenerateShortBatch(storage db.ShortenerStorage, batch []types.ShortenBatchRequest) ([]types.ShortenBatchResponse, []types.URLData, error) {
-	batchResponse := make([]types.ShortenBatchResponse, len(batch))
-	urlData := make([]types.URLData, len(batch))
+func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch []types.ShortenBatchRequest) ([]types.ShortenBatchResponse, []types.URLData, error) {
+	var batchResponse []types.ShortenBatchResponse
+	var urlData []types.URLData
 	newShorts := make(map[string]interface{})
 	for n := 0; n < len(batch); {
 		// Генерируем короткий URL
@@ -58,12 +59,12 @@ func GenerateShortBatch(storage db.ShortenerStorage, batch []types.ShortenBatchR
 		// Формируем батч для ответа клиенту
 		batchResponse = append(batchResponse, types.ShortenBatchResponse{
 			CorrelationID: batch[n].CorrelationID,
-			ShortURL:      shortUrl,
+			ShortURL:      cfg.BaseURL + "/" + shortUrl,
 		})
 
 		// Формируем данные дял записи в БД
 		urlData = append(urlData, types.URLData{
-			ShortURL:    shortUrl,
+			ShortURL:    cfg.BaseURL + "/" + shortUrl,
 			OriginalURL: batch[n].OriginalURL,
 		})
 

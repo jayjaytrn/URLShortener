@@ -49,7 +49,7 @@ func initRouter(h handlers.Handler, authManager *auth.Manager, storage db.Shorte
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
 				middleware.ReadWithCompression,
-				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+				func(next http.Handler, logger *zap.SugaredLogger) http.Handler {
 					return middleware.WithAuth(next, authManager, storage, logger)
 				},
 			).ServeHTTP(w, r)

@@ -187,6 +187,8 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					Path:     "/",
 					HttpOnly: true,
 				})
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
 			} else {
 				logger.Debug("Другая ошибка: " + err.Error())
 				http.Error(w, "authorization error", http.StatusInternalServerError)

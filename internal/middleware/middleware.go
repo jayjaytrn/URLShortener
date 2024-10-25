@@ -2,6 +2,10 @@ package middleware
 
 import (
 	"compress/gzip"
+	"context"
+	"errors"
+	"github.com/jayjaytrn/URLShortener/internal/auth"
+	"github.com/jayjaytrn/URLShortener/internal/db"
 	"io"
 	"net/http"
 	"strings"
@@ -158,4 +162,58 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
+}
+
+func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, _ *zap.SugaredLogger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var newJWT string
+		newUserID := storage.GenerateNewUserID()
+		cookie, err := r.Cookie("Authorization")
+		if err != nil {
+			// Если кука отсутствует, создаём новый JWT
+			if errors.Is(err, http.ErrNoCookie) {
+				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+				if err != nil {
+					http.Error(w, "authorization error", http.StatusInternalServerError)
+					return
+				}
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    newJWT,
+					Path:     "/",
+					HttpOnly: true,
+				})
+			} else {
+				http.Error(w, "authorization error", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// Если кука существует, проверяем JWT
+			userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
+			if err != nil {
+				if strings.Contains(err.Error(), "token is not valid") {
+					// Если JWT не валиден, создаём новый JWT
+					newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+					if err != nil {
+						http.Error(w, "authorization error", http.StatusInternalServerError)
+						return
+					}
+					http.SetCookie(w, &http.Cookie{
+						Name:     "Authorization",
+						Value:    newJWT,
+						Path:     "/",
+						HttpOnly: true,
+					})
+				} else {
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
+			}
+
+			ctx := context.WithValue(r.Context(), "userID", userID)
+			r = r.WithContext(ctx)
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

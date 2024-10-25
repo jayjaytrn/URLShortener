@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/jayjaytrn/URLShortener/internal/auth"
 	"github.com/jayjaytrn/URLShortener/internal/db"
 	"go.uber.org/zap"
 	"net/http"
@@ -19,23 +20,26 @@ func main() {
 
 	ctx := context.Background()
 
+	authManager := auth.NewManager()
+
 	cfg := config.GetConfig()
 
 	s := db.GetStorage(cfg, logger)
 	defer s.Close(ctx)
 
 	h := handlers.Handler{
-		Config:  cfg,
-		Storage: s,
+		Config:      cfg,
+		Storage:     s,
+		AuthManager: authManager,
 	}
 
-	r := initRouter(h, logger)
+	r := initRouter(h, authManager, s, logger)
 
 	err := http.ListenAndServe(cfg.ServerAddress, r)
 	logger.Fatalw("failed to start server", "error", err)
 }
 
-func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
+func initRouter(h handlers.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) *chi.Mux {
 	r := chi.NewRouter()
 	r.Post(`/`,
 		func(w http.ResponseWriter, r *http.Request) {
@@ -45,6 +49,9 @@ func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
 				middleware.ReadWithCompression,
+				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+					return middleware.WithAuth(next, authManager, storage, logger)
+				},
 			).ServeHTTP(w, r)
 		},
 	)
@@ -56,6 +63,9 @@ func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
 				middleware.ReadWithCompression,
+				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+					return middleware.WithAuth(next, authManager, storage, logger)
+				},
 			).ServeHTTP(w, r)
 		},
 	)
@@ -68,6 +78,9 @@ func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
 				middleware.ReadWithCompression,
+				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+					return middleware.WithAuth(next, authManager, storage, logger)
+				},
 			).ServeHTTP(w, r)
 		},
 	)
@@ -79,6 +92,9 @@ func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
 				logger,
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
+				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+					return middleware.WithAuth(next, authManager, storage, logger)
+				},
 			).ServeHTTP(w, r)
 		},
 	)
@@ -90,6 +106,23 @@ func initRouter(h handlers.Handler, logger *zap.SugaredLogger) *chi.Mux {
 				logger,
 				middleware.WithLogging,
 				middleware.WriteWithCompression,
+				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+					return middleware.WithAuth(next, authManager, storage, logger)
+				},
+			).ServeHTTP(w, r)
+		},
+	)
+
+	r.Get(`/api/user/urls`,
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.Conveyor(
+				http.HandlerFunc(h.Urls),
+				logger,
+				middleware.WithLogging,
+				middleware.WriteWithCompression,
+				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+					return middleware.WithAuth(next, authManager, storage, logger)
+				},
 			).ServeHTTP(w, r)
 		},
 	)

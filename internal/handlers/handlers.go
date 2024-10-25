@@ -5,17 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jayjaytrn/URLShortener/config"
+	"github.com/jayjaytrn/URLShortener/internal/auth"
 	"github.com/jayjaytrn/URLShortener/internal/db"
 	"github.com/jayjaytrn/URLShortener/internal/db/postgres"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type Handler struct {
-	Storage db.ShortenerStorage
-	Config  *config.Config
+	Storage     db.ShortenerStorage
+	Config      *config.Config
+	AuthManager *auth.Manager
 }
 
 func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
@@ -45,9 +48,11 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	userID := req.Context().Value("userID").(string)
 	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
+		UserID:      userID,
 	}
 
 	err = h.Storage.Put(urlData)
@@ -116,9 +121,11 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	userID := req.Context().Value("userID").(string)
 	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
+		UserID:      userID,
 	}
 	err = h.Storage.Put(urlData)
 	if err != nil {
@@ -179,7 +186,8 @@ func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Config, h.Storage, batchRequest)
+	userID := req.Context().Value("userID").(string)
+	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Config, h.Storage, batchRequest, userID)
 	if err != nil {
 		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -208,4 +216,28 @@ func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+	userID := req.Context().Value("userID").(string)
+
+	urls, err := h.Storage.GetURLsByUserID(userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no URLs found for userID") {
+			res.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
+
+	urlsResponse, err := json.Marshal(urls)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(res, "failed to encode response", http.StatusInternalServerError)
+	}
+	res.WriteHeader(http.StatusOK)
+	res.Write(urlsResponse)
 }

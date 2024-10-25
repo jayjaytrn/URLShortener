@@ -19,4 +19,8 @@ type ShortenerStorage interface {
 	Close(ctx context.Context) error
 	// Ping проверяет доступность хранилища
 	Ping(ctx context.Context) error
+	// GenerateNewUserID возвращает новый ID для пользователя
+	GenerateNewUserID() string
+	// GetURLsByUserID возвращает все url для userID
+	GetURLsByUserID(userID string) ([]types.URLData, error)
 }

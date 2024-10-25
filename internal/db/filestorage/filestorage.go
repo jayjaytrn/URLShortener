@@ -5,22 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
-
+	"github.com/google/uuid"
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/types"
+	"os"
+	"strconv"
 )
-
-type StorageData struct {
-	UUID        string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
 
 type Manager struct {
 	file        *os.File
-	FileStorage *[]StorageData
+	FileStorage *[]types.URLData
 }
 
 func NewManager(cfg *config.Config) (*Manager, error) {
@@ -29,7 +23,7 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		return nil, err
 	}
 
-	var storage []StorageData
+	var storage []types.URLData
 
 	fm := &Manager{
 		file:        file,
@@ -56,10 +50,11 @@ func (fm *Manager) GetOriginal(shortURL string) (string, error) {
 func (fm *Manager) Put(urlData types.URLData) error {
 	// длина стораджа будет на 1 больше чем его UUID значение
 	storageLastIndex := len(*fm.FileStorage)
-	data := StorageData{
+	data := types.URLData{
 		UUID:        strconv.Itoa(storageLastIndex),
 		ShortURL:    urlData.ShortURL,
 		OriginalURL: urlData.OriginalURL,
+		UserID:      urlData.UserID,
 	}
 	*fm.FileStorage = append(*fm.FileStorage, data)
 	err := fm.WriteURL(urlData)
@@ -88,6 +83,30 @@ func (fm *Manager) Exists(shortURL string) (bool, error) {
 	return false, nil
 }
 
+func (fm *Manager) GenerateNewUserID() string {
+	return uuid.New().String()
+}
+
+func (fm *Manager) GetURLsByUserID(userID string) ([]types.URLData, error) {
+	var userURLs []types.URLData
+
+	for _, urlData := range *fm.FileStorage {
+		if urlData.UserID == userID {
+			userURLs = append(userURLs, types.URLData{
+				ShortURL:    urlData.ShortURL,
+				OriginalURL: urlData.OriginalURL,
+			})
+		}
+	}
+
+	// Если нет URL для данного пользователя, возвращаем пустой список
+	if len(userURLs) == 0 {
+		return nil, fmt.Errorf("no URLs found for userID: %s", userID)
+	}
+
+	return userURLs, nil
+}
+
 func (fm *Manager) Ping(ctx context.Context) error {
 	return fmt.Errorf("ping is not supported for file storage")
 }
@@ -111,6 +130,24 @@ func (fm *Manager) WriteURL(urlData types.URLData) error {
 	return err
 }
 
+func (fm *Manager) GetNewUserID() (string, error) {
+	for {
+		newUUID := uuid.New().String()
+
+		collision := false
+		for _, data := range *fm.FileStorage {
+			if data.UserID == newUUID {
+				collision = true
+				break
+			}
+		}
+
+		if !collision {
+			return newUUID, nil
+		}
+	}
+}
+
 func (fm *Manager) LoadURLStorageFromFile() error {
 	fi, err := fm.file.Stat()
 	if err != nil {
@@ -118,7 +155,7 @@ func (fm *Manager) LoadURLStorageFromFile() error {
 	}
 
 	if fi.Size() == 0 {
-		*fm.FileStorage = []StorageData{}
+		*fm.FileStorage = []types.URLData{}
 		return nil
 	}
 
@@ -130,7 +167,7 @@ func (fm *Manager) LoadURLStorageFromFile() error {
 
 	var scanner = bufio.NewScanner(fm.file)
 	for scanner.Scan() {
-		var data StorageData
+		var data types.URLData
 		line := scanner.Bytes()
 		if err = json.Unmarshal(line, &data); err != nil {
 			return err

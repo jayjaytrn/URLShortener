@@ -1,6 +1,18 @@
 package types
 
+//type URLData struct {
+//	ShortURL    string `json:"short_url"`
+//	OriginalURL string `json:"original_url"`
+//}
+
 type URLData struct {
+	UUID        string `json:"uuid,omitempty"`
+	ShortURL    string `json:"short_url,omitempty"`
+	OriginalURL string `json:"original_url,omitempty"`
+	UserID      string `json:"user_id,omitempty"`
+}
+
+type GetURLsByUserIDResponse struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }

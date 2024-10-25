@@ -187,52 +187,59 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					Path:     "/",
 					HttpOnly: true,
 				})
+				next.ServeHTTP(w, r)
 			} else {
 				logger.Debug("Другая ошибка: " + err.Error())
 				http.Error(w, "authorization error", http.StatusInternalServerError)
 				return
 			}
 		} else {
-			// Если кука существует, проверяем JWT
-			logger.Debug("Кука существует, проверяем JWT")
-			userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
-			if err != nil {
-				logger.Debug("Проверить не удалось: " + err.Error())
-				if strings.Contains(err.Error(), "token is not valid") {
-					// Если JWT не валиден, создаём новый JWT
-					logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
-					newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
-					if err != nil {
-						http.Error(w, "authorization error", http.StatusInternalServerError)
-						return
-					}
-					ctx := context.WithValue(r.Context(), "userID", userID)
-					r = r.WithContext(ctx)
-
-					http.SetCookie(w, &http.Cookie{
-						Name:     "Authorization",
-						Value:    newJWT,
-						Path:     "/",
-						HttpOnly: true,
-					})
-				} else {
-					logger.Debug("Другая ошибка при получении ID из куки: " + err.Error())
-					http.Error(w, "unauthorized", http.StatusUnauthorized)
+			if cookie.Value == "" {
+				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+				if err != nil {
+					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
+				ctx := context.WithValue(r.Context(), "userID", newUserID)
+				r = r.WithContext(ctx)
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    newJWT,
+					Path:     "/",
+					HttpOnly: true,
+				})
+				next.ServeHTTP(w, r)
+			} else {
+				// Если кука существует, проверяем JWT
+				logger.Debug("Кука существует, проверяем JWT")
+				userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
+				if err != nil {
+					logger.Debug("Проверить не удалось: " + err.Error())
+					if strings.Contains(err.Error(), "token is not valid") {
+						// Если JWT не валиден, создаём новый JWT
+						logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
+						newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+						if err != nil {
+							http.Error(w, "authorization error", http.StatusInternalServerError)
+							return
+						}
+						ctx := context.WithValue(r.Context(), "userID", userID)
+						r = r.WithContext(ctx)
+
+						http.SetCookie(w, &http.Cookie{
+							Name:     "Authorization",
+							Value:    newJWT,
+							Path:     "/",
+							HttpOnly: true,
+						})
+						next.ServeHTTP(w, r)
+					} else {
+						logger.Debug("Другая ошибка при получении ID из куки: " + err.Error())
+						http.Error(w, "unauthorized", http.StatusUnauthorized)
+						return
+					}
+				}
 			}
-
-			ctx := context.WithValue(r.Context(), "userID", userID)
-			r = r.WithContext(ctx)
-
-			http.SetCookie(w, &http.Cookie{
-				Name:     "Authorization",
-				Value:    newJWT,
-				Path:     "/",
-				HttpOnly: true,
-			})
 		}
-
-		next.ServeHTTP(w, r)
 	})
 }

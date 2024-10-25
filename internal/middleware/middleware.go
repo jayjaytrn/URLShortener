@@ -194,20 +194,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 			}
 		} else {
 			if cookie.Value == "" {
-				newUserID := storage.GenerateNewUserID()
-				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
-				if err != nil {
-					http.Error(w, "authorization error", http.StatusInternalServerError)
-					return
-				}
-				ctx := context.WithValue(r.Context(), "userID", newUserID)
-				r = r.WithContext(ctx)
-				http.SetCookie(w, &http.Cookie{
-					Name:     "Authorization",
-					Value:    newJWT,
-					Path:     "/",
-					HttpOnly: true,
-				})
+				logger.Debug("Кука найдена, но пустая")
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
 			} else {
 				// Если кука существует, проверяем JWT
 				logger.Debug("Кука существует, проверяем JWT")

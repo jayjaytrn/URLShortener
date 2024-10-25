@@ -121,8 +121,8 @@ func (m *Manager) PutBatch(ctx context.Context, batchData []types.URLData) error
 	for _, b := range batchData {
 		// все изменения записываются в транзакцию
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO shortener (short_url, original_url) VALUES ($1, $2)",
-			b.ShortURL, b.OriginalURL)
+			"INSERT INTO shortener (short_url, original_url, user_id) VALUES ($1, $2, $3)",
+			b.ShortURL, b.OriginalURL, b.UserID)
 		if err != nil {
 			// если ошибка, то откатываем изменения
 			tx.Rollback()

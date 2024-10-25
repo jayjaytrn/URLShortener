@@ -239,8 +239,6 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 				r = r.WithContext(ctx)
 			}
 		}
-		ctx := context.WithValue(r.Context(), "userID", userID)
-		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
 }

@@ -1,13 +1,19 @@
 package urlshort
 
 import (
-	"github.com/jayjaytrn/URLShortener/internal/storage"
+	"fmt"
+	"github.com/jayjaytrn/URLShortener/config"
+	"github.com/jayjaytrn/URLShortener/internal/types"
 	"math/rand"
 	"regexp"
 	"time"
+
+	"github.com/jayjaytrn/URLShortener/internal/db"
 )
 
-func GenerateShortURL() string {
+var urlRegex = regexp.MustCompile(`^https?://([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(/.*)?$`)
+
+func GenerateShortURL(storage db.ShortenerStorage) (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const keyLength = 8
 
@@ -19,21 +25,66 @@ func GenerateShortURL() string {
 			shortURL[i] = charset[rand.Intn(len(charset))]
 		}
 
-		oldURLs := make(map[string]interface{})
-		for _, urlData := range storage.URLStorage {
-			oldURLs[urlData.ShortURL] = struct{}{}
+		exists, err := storage.Exists(string(shortURL))
+		if err != nil {
+			return "", fmt.Errorf("failed to check if URL exists: %w", err)
 		}
 
-		if _, exists := oldURLs[string(shortURL)]; !exists {
+		if !exists {
 			break
 		}
 	}
-	return string(shortURL)
+	return string(shortURL), nil
+}
+
+func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch []types.ShortenBatchRequest) ([]types.ShortenBatchResponse, []types.URLData, error) {
+	var batchResponse []types.ShortenBatchResponse
+	var urlData []types.URLData
+	newShorts := make(map[string]interface{})
+	for n := 0; n < len(batch); {
+		// Генерируем короткий URL
+		// проверяем есть ли такой в БД
+		shortURL, err := GenerateShortURL(storage)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Проверяем, существует ли уже такой короткий URL среди сгенерированных новых
+		if _, ok := newShorts[shortURL]; ok {
+			// Если такой URL уже есть, продолжаем цикл с того же индекса
+			continue
+		}
+
+		// Добавляем новый короткий URL
+		newShorts[shortURL] = batch[n]
+
+		// Формируем батч для ответа клиенту
+		batchResponse = append(batchResponse, types.ShortenBatchResponse{
+			CorrelationID: batch[n].CorrelationID,
+			ShortURL:      cfg.BaseURL + "/" + shortURL,
+		})
+
+		// Формируем данные дял записи в БД
+		urlData = append(urlData, types.URLData{
+			ShortURL:    shortURL,
+			OriginalURL: batch[n].OriginalURL,
+		})
+
+		// Переходим к следующей итерации только если URL уникальный
+		n++
+	}
+	return batchResponse, urlData, nil
 }
 
 func ValidateURL(url string) bool {
-	regex := `^https?://([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(/.*)?$`
+	return urlRegex.MatchString(url)
+}
 
-	m, _ := regexp.MatchString(regex, url)
-	return m
+func ValidateBatchRequestURLs(batch []types.ShortenBatchRequest) bool {
+	for _, b := range batch {
+		if !ValidateURL(b.OriginalURL) {
+			return false
+		}
+	}
+	return true
 }

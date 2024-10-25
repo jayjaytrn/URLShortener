@@ -15,6 +15,7 @@ import (
 type Manager struct {
 	file        *os.File
 	FileStorage *[]types.URLData
+	cfg         *config.Config
 }
 
 func NewManager(cfg *config.Config) (*Manager, error) {
@@ -28,6 +29,7 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 	fm := &Manager{
 		file:        file,
 		FileStorage: &storage,
+		cfg:         cfg,
 	}
 
 	err = fm.LoadURLStorageFromFile()
@@ -93,7 +95,7 @@ func (fm *Manager) GetURLsByUserID(userID string) ([]types.URLData, error) {
 	for _, urlData := range *fm.FileStorage {
 		if urlData.UserID == userID {
 			userURLs = append(userURLs, types.URLData{
-				ShortURL:    urlData.ShortURL,
+				ShortURL:    fm.cfg.BaseURL + "/" + urlData.ShortURL,
 				OriginalURL: urlData.OriginalURL,
 			})
 		}

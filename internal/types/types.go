@@ -12,11 +12,6 @@ type URLData struct {
 	UserID      string `json:"user_id,omitempty"`
 }
 
-type GetURLsByUserIDResponse struct {
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
-
 type ShortenRequest struct {
 	URL string `json:"url"`
 }

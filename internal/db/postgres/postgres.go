@@ -20,7 +20,8 @@ func (e *OriginalExistError) Error() string {
 }
 
 type Manager struct {
-	db *sql.DB
+	db  *sql.DB
+	cfg *config.Config
 }
 
 // NewManager создает новый экземпляр Manager и устанавливает подключение к БД
@@ -35,7 +36,8 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 	}
 
 	manager := &Manager{
-		db: db,
+		db:  db,
+		cfg: cfg,
 	}
 
 	if err := manager.createShortenerTable(); err != nil {
@@ -72,7 +74,7 @@ func (m *Manager) GetURLsByUserID(userID string) ([]types.URLData, error) {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		urls = append(urls, types.URLData{
-			ShortURL:    shortURL,
+			ShortURL:    m.cfg.BaseURL + "/" + shortURL,
 			OriginalURL: originalURL,
 		})
 	}

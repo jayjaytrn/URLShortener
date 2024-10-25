@@ -10,11 +10,13 @@ import (
 
 type Manager struct {
 	RelatesURLs []types.URLData
+	Config      *config.Config
 }
 
-func NewManager(_ *config.Config) (*Manager, error) {
+func NewManager(cfg *config.Config) (*Manager, error) {
 	return &Manager{
 		RelatesURLs: []types.URLData{},
+		Config:      cfg,
 	}, nil
 }
 
@@ -63,7 +65,7 @@ func (m *Manager) GetURLsByUserID(userID string) ([]types.URLData, error) {
 	for _, urlData := range m.RelatesURLs {
 		if urlData.UserID == userID {
 			userURLs = append(userURLs, types.URLData{
-				ShortURL:    urlData.ShortURL,
+				ShortURL:    m.Config.BaseURL + "/" + urlData.ShortURL,
 				OriginalURL: urlData.OriginalURL,
 			})
 		}

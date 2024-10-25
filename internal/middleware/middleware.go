@@ -177,6 +177,8 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
+				ctx := context.WithValue(r.Context(), "userID", newUserID)
+				r = r.WithContext(ctx)
 				http.SetCookie(w, &http.Cookie{
 					Name:     "Authorization",
 					Value:    newJWT,
@@ -198,6 +200,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 						http.Error(w, "authorization error", http.StatusInternalServerError)
 						return
 					}
+					ctx := context.WithValue(r.Context(), "userID", userID)
+					r = r.WithContext(ctx)
+
 					http.SetCookie(w, &http.Cookie{
 						Name:     "Authorization",
 						Value:    newJWT,
@@ -209,9 +214,6 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					return
 				}
 			}
-
-			ctx := context.WithValue(r.Context(), "userID", userID)
-			r = r.WithContext(ctx)
 		}
 
 		next.ServeHTTP(w, r)

@@ -164,14 +164,16 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
-func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, _ *zap.SugaredLogger) http.Handler {
+func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var newJWT string
 		newUserID := storage.GenerateNewUserID()
 		cookie, err := r.Cookie("Authorization")
 		if err != nil {
 			// Если кука отсутствует, создаём новый JWT
+			logger.Debug("Кука отсутствует")
 			if errors.Is(err, http.ErrNoCookie) {
+				logger.Debug("ErrNoCookie, создаем новый JWT")
 				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 				if err != nil {
 					http.Error(w, "authorization error", http.StatusInternalServerError)
@@ -186,15 +188,19 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					HttpOnly: true,
 				})
 			} else {
+				logger.Debug("Другая ошибка: " + err.Error())
 				http.Error(w, "authorization error", http.StatusInternalServerError)
 				return
 			}
 		} else {
 			// Если кука существует, проверяем JWT
+			logger.Debug("Кука существует, проверяем JWT")
 			userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
 			if err != nil {
+				logger.Debug("Проверить не удалось: " + err.Error())
 				if strings.Contains(err.Error(), "token is not valid") {
 					// Если JWT не валиден, создаём новый JWT
+					logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
 					newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 					if err != nil {
 						http.Error(w, "authorization error", http.StatusInternalServerError)
@@ -210,6 +216,7 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 						HttpOnly: true,
 					})
 				} else {
+					logger.Debug("Другая ошибка при получении ID из куки: " + err.Error())
 					http.Error(w, "unauthorized", http.StatusUnauthorized)
 					return
 				}

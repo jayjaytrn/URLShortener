@@ -167,18 +167,18 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var newJWT string
-		newUserID := storage.GenerateNewUserID()
+		var userID string
 		cookie, err := r.Cookie("Authorization")
 		if err != nil {
-			// Если кука отсутствует, создаём новый JWT
-			logger.Debug("Кука отсутствует")
 			if errors.Is(err, http.ErrNoCookie) {
 				logger.Debug("ErrNoCookie, создаем новый JWT")
+				newUserID := storage.GenerateNewUserID()
 				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 				if err != nil {
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
+
 				ctx := context.WithValue(r.Context(), "userID", newUserID)
 				r = r.WithContext(ctx)
 				http.SetCookie(w, &http.Cookie{
@@ -187,7 +187,6 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					Path:     "/",
 					HttpOnly: true,
 				})
-				next.ServeHTTP(w, r)
 			} else {
 				logger.Debug("Другая ошибка: " + err.Error())
 				http.Error(w, "authorization error", http.StatusInternalServerError)
@@ -195,6 +194,7 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 			}
 		} else {
 			if cookie.Value == "" {
+				newUserID := storage.GenerateNewUserID()
 				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 				if err != nil {
 					http.Error(w, "authorization error", http.StatusInternalServerError)
@@ -208,16 +208,16 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					Path:     "/",
 					HttpOnly: true,
 				})
-				next.ServeHTTP(w, r)
 			} else {
 				// Если кука существует, проверяем JWT
 				logger.Debug("Кука существует, проверяем JWT")
-				userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
+				userID, err = authManager.GetUserIdFromJWTString(cookie.Value)
 				if err != nil {
 					logger.Debug("Проверить не удалось: " + err.Error())
 					if strings.Contains(err.Error(), "token is not valid") {
 						// Если JWT не валиден, создаём новый JWT
 						logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
+						newUserID := storage.GenerateNewUserID()
 						newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 						if err != nil {
 							http.Error(w, "authorization error", http.StatusInternalServerError)
@@ -232,14 +232,15 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 							Path:     "/",
 							HttpOnly: true,
 						})
-						next.ServeHTTP(w, r)
-					} else {
-						logger.Debug("Другая ошибка при получении ID из куки: " + err.Error())
-						http.Error(w, "unauthorized", http.StatusUnauthorized)
-						return
 					}
 				}
+				logger.Debug("Токен валидный")
+				ctx := context.WithValue(r.Context(), "userID", userID)
+				r = r.WithContext(ctx)
 			}
 		}
+		ctx := context.WithValue(r.Context(), "userID", userID)
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
 	})
 }

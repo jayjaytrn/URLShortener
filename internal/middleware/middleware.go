@@ -221,6 +221,10 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 							Path:     "/",
 							HttpOnly: true,
 						})
+					} else {
+						logger.Debug("Кука найдена, но неверная")
+						http.Error(w, "unauthorized", http.StatusUnauthorized)
+						return
 					}
 				}
 				logger.Debug("Токен валидный")

@@ -213,7 +213,6 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					}
 					ctx := context.WithValue(r.Context(), "userID", userID)
 					r = r.WithContext(ctx)
-
 					http.SetCookie(w, &http.Cookie{
 						Name:     "Authorization",
 						Value:    newJWT,

@@ -55,6 +55,6 @@ func (m *Manager) GetUserIdFromJWTString(tokenString string) (string, error) {
 		return "", fmt.Errorf("token is valid but userID is missing")
 	}
 
-	fmt.Println("Token is valid")
+	fmt.Println("Token is valid: " + claims.UserID)
 	return claims.UserID, nil
 }

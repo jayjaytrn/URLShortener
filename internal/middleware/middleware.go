@@ -169,7 +169,7 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 		var newJWT string
 		newUserID := storage.GenerateNewUserID()
 		cookie, err := r.Cookie("Authorization")
-		if err != nil {
+		if cookie.Value == "" && err != nil {
 			// Если кука отсутствует, создаём новый JWT
 			logger.Debug("Кука отсутствует")
 			if errors.Is(err, http.ErrNoCookie) {

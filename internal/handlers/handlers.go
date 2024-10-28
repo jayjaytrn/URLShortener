@@ -222,9 +222,9 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	userID := req.Context().Value("userID").(string)
 
-	_, err := req.Cookie("Authorization")
-	if errors.Is(err, http.ErrNoCookie) {
-
+	if req.Context().Value("cookieExisted") == false {
+		http.Error(res, "unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	urls, err := h.Storage.GetURLsByUserID(userID)

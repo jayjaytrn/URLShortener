@@ -178,30 +178,27 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 		cookie, err := r.Cookie("Authorization")
 		if err != nil {
 			if errors.Is(err, http.ErrNoCookie) {
-				logger.Debug("No cookie: " + err.Error())
-				http.Error(w, "No cookie", http.StatusUnauthorized)
-				return
+				// Если кука отсутствует, создаём новый JWT
+				logger.Debug("Кука отсутствует")
+				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+				if err != nil {
+					http.Error(w, "authorization error", http.StatusInternalServerError)
+					return
+				}
+				ctx := context.WithValue(r.Context(), "userID", newUserID)
+				r = r.WithContext(ctx)
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    newJWT,
+					Path:     "/",
+					HttpOnly: true,
+				})
 			} else {
 				logger.Debug("Ошибка при получении куки: " + err.Error())
-				http.Error(w, "Ошибка при получении куки", http.StatusInternalServerError)
+				http.Error(w, "Ошибка при получении куки", http.StatusUnauthorized)
 				return
 			}
 
-			// Если кука отсутствует, создаём новый JWT
-			//logger.Debug("Кука отсутствует")
-			//newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
-			//if err != nil {
-			//	http.Error(w, "authorization error", http.StatusInternalServerError)
-			//	return
-			//}
-			//ctx := context.WithValue(r.Context(), "userID", newUserID)
-			//r = r.WithContext(ctx)
-			//http.SetCookie(w, &http.Cookie{
-			//	Name:     "Authorization",
-			//	Value:    newJWT,
-			//	Path:     "/",
-			//	HttpOnly: true,
-			//})
 		} else {
 			// Если кука существует, проверяем JWT
 			logger.Debug("Кука существует, проверяем JWT")

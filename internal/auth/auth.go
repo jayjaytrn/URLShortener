@@ -51,6 +51,6 @@ func (m *Manager) GetUserIdFromJWTString(tokenString string) (string, error) {
 		return "", fmt.Errorf("token is not valid: %w", err)
 	}
 
-	fmt.Println("Token is valid")
+	fmt.Println("Token is valid: " + claims.UserID)
 	return claims.UserID, nil
 }

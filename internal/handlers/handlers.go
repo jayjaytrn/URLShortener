@@ -49,7 +49,7 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := req.Context().Value("userID").(string)
+	userID := req.Context().Value(middleware.UserIDKey).(string)
 	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
@@ -122,7 +122,7 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := req.Context().Value("userID").(string)
+	userID := req.Context().Value(middleware.UserIDKey).(string)
 	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
@@ -187,7 +187,7 @@ func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := req.Context().Value("userID").(string)
+	userID := req.Context().Value(middleware.UserIDKey).(string)
 	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Config, h.Storage, batchRequest, userID)
 	if err != nil {
 		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
@@ -221,7 +221,7 @@ func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 
 func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
-	userID := req.Context().Value("userID").(string)
+	userID := req.Context().Value(middleware.UserIDKey).(string)
 
 	if req.Context().Value(middleware.CookieExistedKey) == false {
 		http.Error(res, "Unauthorized - cookie was created by request", http.StatusUnauthorized)

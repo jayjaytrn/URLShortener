@@ -34,7 +34,7 @@ func (m *Manager) BuildJWTStringWithNewID(userID string) (string, error) {
 	return tokenString, nil
 }
 
-func (m *Manager) GetUserIdFromJWTString(tokenString string) (string, error) {
+func (m *Manager) GetUserIDFromJWTString(tokenString string) (string, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,
 		func(t *jwt.Token) (interface{}, error) {

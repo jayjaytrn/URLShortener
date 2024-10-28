@@ -14,6 +14,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type ContextKey string
+
+const (
+	UserIDKey        ContextKey = "userID"
+	CookieExistedKey ContextKey = "cookieExisted"
+)
+
 type (
 	loggingResponseWriter struct {
 		http.ResponseWriter
@@ -178,9 +185,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
-				ctx := context.WithValue(r.Context(), "userID", newUserID)
+				ctx := context.WithValue(r.Context(), UserIDKey, newUserID)
 				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
-				ctx = context.WithValue(ctx, "cookieExisted", false)
+				ctx = context.WithValue(ctx, CookieExistedKey, false)
 				r = r.WithContext(ctx)
 
 				// установим новый JWT так как старого не было
@@ -198,7 +205,7 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 		} else {
 			// Если кука существует, проверяем JWT
 			logger.Debug("Кука существует, проверяем JWT")
-			userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
+			userID, err := authManager.GetUserIDFromJWTString(cookie.Value)
 			if err != nil {
 				logger.Debug("Проверить не удалось: " + err.Error())
 				// Если JWT не валиден, создаём новый JWT
@@ -208,9 +215,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
-				ctx := context.WithValue(r.Context(), "userID", userID)
+				ctx := context.WithValue(r.Context(), UserIDKey, userID)
 				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
-				ctx = context.WithValue(ctx, "cookieExisted", true)
+				ctx = context.WithValue(ctx, CookieExistedKey, true)
 				r = r.WithContext(ctx)
 				// установим новый JWT так как старый оказался невалидным
 				http.SetCookie(w, &http.Cookie{
@@ -221,9 +228,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 				})
 			} else {
 				// куки тут не трогаем так как они валидные
-				ctx := context.WithValue(r.Context(), "userID", userID)
+				ctx := context.WithValue(r.Context(), UserIDKey, userID)
 				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
-				ctx = context.WithValue(ctx, "cookieExisted", true)
+				ctx = context.WithValue(ctx, CookieExistedKey, true)
 				r = r.WithContext(ctx)
 			}
 		}

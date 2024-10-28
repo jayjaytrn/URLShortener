@@ -8,6 +8,7 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/auth"
 	"github.com/jayjaytrn/URLShortener/internal/db"
 	"github.com/jayjaytrn/URLShortener/internal/db/postgres"
+	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
 	"io"
@@ -222,7 +223,7 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	userID := req.Context().Value("userID").(string)
 
-	if req.Context().Value("cookieExisted") == false {
+	if req.Context().Value(middleware.CookieExistedKey) == false {
 		http.Error(res, "Unauthorized - cookie was created by request", http.StatusUnauthorized)
 		return
 	}

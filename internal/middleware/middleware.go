@@ -166,6 +166,13 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 
 func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.Debugf("Запрос: Метод = %s, URL = %s, Headers = %v", r.Method, r.URL.String(), r.Header)
+
+		// Логируем все куки запроса
+		for _, c := range r.Cookies() {
+			logger.Debugf("Кука: Name = %s, Value = %s", c.Name, c.Value)
+		}
+
 		var newJWT string
 		newUserID := storage.GenerateNewUserID()
 		cookie, err := r.Cookie("Authorization")

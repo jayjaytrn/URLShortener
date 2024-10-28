@@ -222,6 +222,11 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	userID := req.Context().Value("userID").(string)
 
+	_, err := req.Cookie("Authorization")
+	if errors.Is(err, http.ErrNoCookie) {
+
+	}
+
 	urls, err := h.Storage.GetURLsByUserID(userID)
 	if err != nil {
 		if strings.Contains(err.Error(), "no URLs found for userID") {

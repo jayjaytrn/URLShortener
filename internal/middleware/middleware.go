@@ -166,27 +166,24 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 
 func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Debugf("Запрос: Метод = %s, URL = %s, Headers = %v", r.Method, r.URL.String(), r.Header)
-
-		// Логируем все куки запроса
-		for _, c := range r.Cookies() {
-			logger.Debugf("Кука: Name = %s, Value = %s", c.Name, c.Value)
-		}
-
 		var newJWT string
 		newUserID := storage.GenerateNewUserID()
 		cookie, err := r.Cookie("Authorization")
 		if err != nil {
 			if errors.Is(err, http.ErrNoCookie) {
-				// Если кука отсутствует, создаём новый JWT
-				logger.Debug("Кука отсутствует")
+				// Если кука отсутствует, создаём новый JWT который потом передадим в куке
+				logger.Debug("Кука отсутствует, создаем новый JWT")
 				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 				if err != nil {
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
 				ctx := context.WithValue(r.Context(), "userID", newUserID)
+				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
+				ctx = context.WithValue(ctx, "cookieExisted", false)
 				r = r.WithContext(ctx)
+
+				// установим новый JWT так как старого не было
 				http.SetCookie(w, &http.Cookie{
 					Name:     "Authorization",
 					Value:    newJWT,
@@ -198,7 +195,6 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 				http.Error(w, "Ошибка при получении куки", http.StatusUnauthorized)
 				return
 			}
-
 		} else {
 			// Если кука существует, проверяем JWT
 			logger.Debug("Кука существует, проверяем JWT")
@@ -213,27 +209,24 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					return
 				}
 				ctx := context.WithValue(r.Context(), "userID", userID)
+				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
+				ctx = context.WithValue(ctx, "cookieExisted", true)
 				r = r.WithContext(ctx)
-
+				// установим новый JWT так как старый оказался невалидным
 				http.SetCookie(w, &http.Cookie{
 					Name:     "Authorization",
 					Value:    newJWT,
 					Path:     "/",
 					HttpOnly: true,
 				})
+			} else {
+				// куки тут не трогаем так как они валидные
+				ctx := context.WithValue(r.Context(), "userID", userID)
+				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
+				ctx = context.WithValue(ctx, "cookieExisted", true)
+				r = r.WithContext(ctx)
 			}
-
-			ctx := context.WithValue(r.Context(), "userID", userID)
-			r = r.WithContext(ctx)
-
-			http.SetCookie(w, &http.Cookie{
-				Name:     "Authorization",
-				Value:    newJWT,
-				Path:     "/",
-				HttpOnly: true,
-			})
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }

@@ -169,7 +169,7 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 		var newJWT string
 		newUserID := storage.GenerateNewUserID()
 		cookie, err := r.Cookie("Authorization")
-		if cookie.Value == "" && err != nil {
+		if err != nil {
 			// Если кука отсутствует, создаём новый JWT
 			logger.Debug("Кука отсутствует")
 			if errors.Is(err, http.ErrNoCookie) {
@@ -198,28 +198,22 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 			userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
 			if err != nil {
 				logger.Debug("Проверить не удалось: " + err.Error())
-				if strings.Contains(err.Error(), "token is not valid") {
-					// Если JWT не валиден, создаём новый JWT
-					logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
-					newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
-					if err != nil {
-						http.Error(w, "authorization error", http.StatusInternalServerError)
-						return
-					}
-					ctx := context.WithValue(r.Context(), "userID", userID)
-					r = r.WithContext(ctx)
-
-					http.SetCookie(w, &http.Cookie{
-						Name:     "Authorization",
-						Value:    newJWT,
-						Path:     "/",
-						HttpOnly: true,
-					})
-				} else {
-					logger.Debug("Другая ошибка при получении ID из куки: " + err.Error())
-					http.Error(w, "unauthorized", http.StatusUnauthorized)
+				// Если JWT не валиден, создаём новый JWT
+				logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
+				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+				if err != nil {
+					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
+				ctx := context.WithValue(r.Context(), "userID", userID)
+				r = r.WithContext(ctx)
+
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    newJWT,
+					Path:     "/",
+					HttpOnly: true,
+				})
 			}
 
 			ctx := context.WithValue(r.Context(), "userID", userID)

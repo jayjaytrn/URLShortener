@@ -204,6 +204,11 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 			logger.Debug("Кука существует, проверяем JWT")
 			userID, err := authManager.GetUserIdFromJWTString(cookie.Value)
 			if err != nil {
+				if strings.Contains(err.Error(), "token is valid but userID is missing") {
+					logger.Debug("ID не передан: " + err.Error())
+					http.Error(w, "authorization error", http.StatusUnauthorized)
+					return
+				}
 				logger.Debug("Проверить не удалось: " + err.Error())
 				// Если JWT не валиден, создаём новый JWT
 				logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())

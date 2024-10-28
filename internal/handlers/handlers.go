@@ -223,7 +223,7 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	userID := req.Context().Value("userID").(string)
 
 	if req.Context().Value("cookieExisted") == false {
-		http.Error(res, "unauthorized", http.StatusUnauthorized)
+		http.Error(res, "Unauthorized - cookie was created by request", http.StatusUnauthorized)
 		return
 	}
 
@@ -240,9 +240,7 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err != nil {
-		http.Error(res, "failed to encode response", http.StatusInternalServerError)
-	}
+
 	res.WriteHeader(http.StatusOK)
 	res.Write(urlsResponse)
 }

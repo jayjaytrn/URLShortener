@@ -14,13 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type contextKey string
-
-const (
-	userIDKey        contextKey = "userID"
-	cookieExistedKey contextKey = "cookieExisted"
-)
-
 type (
 	loggingResponseWriter struct {
 		http.ResponseWriter
@@ -185,9 +178,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
-				ctx := context.WithValue(r.Context(), userIDKey, newUserID)
+				ctx := context.WithValue(r.Context(), "userID", newUserID)
 				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
-				ctx = context.WithValue(ctx, cookieExistedKey, false)
+				ctx = context.WithValue(ctx, "cookieExisted", false)
 				r = r.WithContext(ctx)
 
 				// установим новый JWT так как старого не было
@@ -215,9 +208,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
-				ctx := context.WithValue(r.Context(), userIDKey, newUserID)
+				ctx := context.WithValue(r.Context(), "userID", userID)
 				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
-				ctx = context.WithValue(r.Context(), cookieExistedKey, true)
+				ctx = context.WithValue(ctx, "cookieExisted", true)
 				r = r.WithContext(ctx)
 				// установим новый JWT так как старый оказался невалидным
 				http.SetCookie(w, &http.Cookie{
@@ -228,9 +221,9 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 				})
 			} else {
 				// куки тут не трогаем так как они валидные
-				ctx := context.WithValue(r.Context(), userIDKey, userID)
+				ctx := context.WithValue(r.Context(), "userID", userID)
 				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
-				ctx = context.WithValue(ctx, cookieExistedKey, true)
+				ctx = context.WithValue(ctx, "cookieExisted", true)
 				r = r.WithContext(ctx)
 			}
 		}

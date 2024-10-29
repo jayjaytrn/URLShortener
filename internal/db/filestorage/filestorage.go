@@ -9,7 +9,6 @@ import (
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 	"os"
-	"strconv"
 )
 
 type Manager struct {
@@ -50,10 +49,7 @@ func (fm *Manager) GetOriginal(shortURL string) (string, error) {
 }
 
 func (fm *Manager) Put(urlData types.URLData) error {
-	// длина стораджа будет на 1 больше чем его UUID значение
-	storageLastIndex := len(*fm.FileStorage)
 	data := types.URLData{
-		UUID:        strconv.Itoa(storageLastIndex),
 		ShortURL:    urlData.ShortURL,
 		OriginalURL: urlData.OriginalURL,
 		UserID:      urlData.UserID,

@@ -86,6 +86,10 @@ func (h *Handler) URLReturner(res http.ResponseWriter, req *http.Request) {
 
 	originalURL, err := h.Storage.GetOriginal(shortURL)
 	if err != nil {
+		if strings.Contains(err.Error(), "URL has been deleted") {
+			http.Error(res, "URL has been deleted", http.StatusGone) // 410 Gone
+			return
+		}
 		http.Error(res, "URL not found", http.StatusNotFound)
 		return
 	}
@@ -244,4 +248,39 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	res.Write(urlsResponse)
+}
+
+func (h *Handler) DeleteUrlsAsync(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+	userID := req.Context().Value(middleware.UserIDKey).(string)
+
+	// Проверка авторизации
+	if req.Context().Value(middleware.CookieExistedKey) == false {
+		http.Error(res, "Unauthorized - cookie was created by request", http.StatusUnauthorized)
+		return
+	}
+
+	// Декодирование списка URL из запроса
+	var shortURLs []string
+	if err := json.NewDecoder(req.Body).Decode(&shortURLs); err != nil {
+		http.Error(res, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	res.WriteHeader(http.StatusAccepted)
+
+	// Создаём канал для передачи URL на удаление
+	urlChannel := make(chan string)
+
+	// Запуск горутины для отправки URL в канал
+	go func() {
+		for _, shortURL := range shortURLs {
+			urlChannel <- shortURL
+		}
+		close(urlChannel) // Закрываем канал после передачи всех URL
+	}()
+
+	// Запускаем BatchDelete с каналом urlChannel
+	go h.Storage.BatchDelete(urlChannel, userID)
+
 }

@@ -146,6 +146,10 @@ func (fm *Manager) GetNewUserID() (string, error) {
 	}
 }
 
+func (fm *Manager) BatchDelete(_ chan string, _ string) {
+	return
+}
+
 func (fm *Manager) LoadURLStorageFromFile() error {
 	fi, err := fm.file.Stat()
 	if err != nil {

@@ -78,6 +78,10 @@ func (m *Manager) GetURLsByUserID(userID string) ([]types.URLData, error) {
 	return userURLs, nil
 }
 
+func (m *Manager) BatchDelete(_ chan string, _ string) {
+	return
+}
+
 // Close закрывает соединение с базой
 func (m *Manager) Close(_ context.Context) error {
 	return nil

@@ -23,4 +23,6 @@ type ShortenerStorage interface {
 	GenerateNewUserID() string
 	// GetURLsByUserID возвращает все url для userID
 	GetURLsByUserID(userID string) ([]types.URLData, error)
+	// BatchDelete помечает url как удаленные
+	BatchDelete(urlChannel chan string, userID string)
 }

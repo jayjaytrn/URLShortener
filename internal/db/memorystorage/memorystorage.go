@@ -79,7 +79,6 @@ func (m *Manager) GetURLsByUserID(userID string) ([]types.URLData, error) {
 }
 
 func (m *Manager) BatchDelete(_ chan string, _ string) {
-	return
 }
 
 // Close закрывает соединение с базой

@@ -2,12 +2,23 @@ package middleware
 
 import (
 	"compress/gzip"
+	"context"
+	"errors"
+	"github.com/jayjaytrn/URLShortener/internal/auth"
+	"github.com/jayjaytrn/URLShortener/internal/db"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
+)
+
+type ContextKey string
+
+const (
+	UserIDKey        ContextKey = "userID"
+	CookieExistedKey ContextKey = "cookieExisted"
 )
 
 type (
@@ -158,4 +169,71 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
+}
+
+func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var newJWT string
+		newUserID := storage.GenerateNewUserID()
+		cookie, err := r.Cookie("Authorization")
+		if err != nil {
+			if errors.Is(err, http.ErrNoCookie) {
+				// Если кука отсутствует, создаём новый JWT который потом передадим в куке
+				logger.Debug("Кука отсутствует, создаем новый JWT")
+				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+				if err != nil {
+					http.Error(w, "authorization error", http.StatusInternalServerError)
+					return
+				}
+				ctx := context.WithValue(r.Context(), UserIDKey, newUserID)
+				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
+				ctx = context.WithValue(ctx, CookieExistedKey, false)
+				r = r.WithContext(ctx)
+
+				// установим новый JWT так как старого не было
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    newJWT,
+					Path:     "/",
+					HttpOnly: true,
+				})
+			} else {
+				logger.Debug("Ошибка при получении куки: " + err.Error())
+				http.Error(w, "Ошибка при получении куки", http.StatusUnauthorized)
+				return
+			}
+		} else {
+			// Если кука существует, проверяем JWT
+			logger.Debug("Кука существует, проверяем JWT")
+			userID, err := authManager.GetUserIDFromJWTString(cookie.Value)
+			if err != nil {
+				logger.Debug("Проверить не удалось: " + err.Error())
+				// Если JWT не валиден, создаём новый JWT
+				logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
+				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
+				if err != nil {
+					http.Error(w, "authorization error", http.StatusInternalServerError)
+					return
+				}
+				ctx := context.WithValue(r.Context(), UserIDKey, userID)
+				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
+				ctx = context.WithValue(ctx, CookieExistedKey, true)
+				r = r.WithContext(ctx)
+				// установим новый JWT так как старый оказался невалидным
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    newJWT,
+					Path:     "/",
+					HttpOnly: true,
+				})
+			} else {
+				// куки тут не трогаем так как они валидные
+				ctx := context.WithValue(r.Context(), UserIDKey, userID)
+				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
+				ctx = context.WithValue(ctx, CookieExistedKey, true)
+				r = r.WithContext(ctx)
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

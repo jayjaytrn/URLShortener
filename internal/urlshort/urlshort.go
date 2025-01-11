@@ -37,7 +37,7 @@ func GenerateShortURL(storage db.ShortenerStorage) (string, error) {
 	return string(shortURL), nil
 }
 
-func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch []types.ShortenBatchRequest) ([]types.ShortenBatchResponse, []types.URLData, error) {
+func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch []types.ShortenBatchRequest, userID string) ([]types.ShortenBatchResponse, []types.URLData, error) {
 	var batchResponse []types.ShortenBatchResponse
 	var urlData []types.URLData
 	newShorts := make(map[string]interface{})
@@ -68,6 +68,7 @@ func GenerateShortBatch(cfg *config.Config, storage db.ShortenerStorage, batch [
 		urlData = append(urlData, types.URLData{
 			ShortURL:    shortURL,
 			OriginalURL: batch[n].OriginalURL,
+			UserID:      userID,
 		})
 
 		// Переходим к следующей итерации только если URL уникальный

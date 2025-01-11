@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -74,6 +75,9 @@ func Test_urlWaiter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			req := httptest.NewRequest(tt.method, "http://localhost:8080/", io.NopCloser(strings.NewReader(tt.body)))
+			ctx := context.WithValue(req.Context(), middleware.UserIDKey, "test-user-id")
+			req = req.WithContext(ctx)
+
 			w := httptest.NewRecorder()
 
 			handler.URLWaiter(w, req)
@@ -162,6 +166,9 @@ func Test_urlReturner(t *testing.T) {
 			if tt.path == "/shortURL" {
 				postRequest := httptest.NewRequest("POST", "http://localhost:8080/", io.NopCloser(strings.NewReader("https://practicum.yandex.ru/")))
 				postResponse := httptest.NewRecorder()
+
+				ctx := context.WithValue(req.Context(), middleware.UserIDKey, "test-user-id")
+				postRequest = postRequest.WithContext(ctx)
 
 				handler.URLWaiter(postResponse, postRequest)
 

@@ -1,8 +1,10 @@
 package types
 
 type URLData struct {
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
+	UserID      string `json:"user_id,omitempty"`
+	ShortURL    string `json:"short_url,omitempty"`
+	OriginalURL string `json:"original_url,omitempty"`
+	DeletedFlag bool   `json:"is_deleted"`
 }
 
 type ShortenRequest struct {

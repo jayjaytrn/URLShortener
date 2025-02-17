@@ -21,8 +21,9 @@ func (e *OriginalExistError) Error() string {
 }
 
 type Manager struct {
-	db  *sql.DB
-	cfg *config.Config
+	db      *sql.DB
+	cfg     *config.Config
+	putStmt *sql.Stmt
 }
 
 // NewManager создает новый экземпляр Manager и устанавливает подключение к БД
@@ -36,9 +37,15 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
+	putStmt, err := preparePutStatement(db)
+	if err != nil {
+		return nil, err
+	}
+
 	manager := &Manager{
-		db:  db,
-		cfg: cfg,
+		db:      db,
+		cfg:     cfg,
+		putStmt: putStmt,
 	}
 
 	if err := manager.createShortenerTable(); err != nil {
@@ -99,14 +106,7 @@ func (m *Manager) GetURLsByUserID(userID string) ([]types.URLData, error) {
 func (m *Manager) Put(urlData types.URLData) error {
 	var alreadyExistedShortURL string
 
-	err := m.db.QueryRow(`
-        WITH ins AS (
-            INSERT INTO shortener (short_url, original_url, user_id)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (original_url) DO NOTHING
-        )
-        SELECT short_url FROM shortener WHERE original_url = $2;
-    `, urlData.ShortURL, urlData.OriginalURL, urlData.UserID).Scan(&alreadyExistedShortURL)
+	err := m.putStmt.QueryRow(urlData.ShortURL, urlData.OriginalURL, urlData.UserID).Scan(&alreadyExistedShortURL)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("failed to insert URL: %w", err)
@@ -207,4 +207,19 @@ func (m *Manager) createShortenerTable() error {
 		return fmt.Errorf("failed to create table: %w", err)
 	}
 	return nil
+}
+
+func preparePutStatement(db *sql.DB) (*sql.Stmt, error) {
+	stmt, err := db.Prepare(`
+        WITH ins AS (
+            INSERT INTO shortener (short_url, original_url, user_id)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (original_url) DO NOTHING
+        )
+        SELECT short_url FROM shortener WHERE original_url = $2;
+    `)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare query: %w", err)
+	}
+	return stmt, nil
 }

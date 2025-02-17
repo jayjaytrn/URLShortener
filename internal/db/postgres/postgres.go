@@ -37,20 +37,20 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	putStmt, err := preparePutStatement(db)
-	if err != nil {
-		return nil, err
-	}
-
 	manager := &Manager{
-		db:      db,
-		cfg:     cfg,
-		putStmt: putStmt,
+		db:  db,
+		cfg: cfg,
 	}
 
 	if err := manager.createShortenerTable(); err != nil {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
+
+	putStmt, err := preparePutStatement(db)
+	if err != nil {
+		return nil, err
+	}
+	manager.putStmt = putStmt
 
 	return manager, nil
 }

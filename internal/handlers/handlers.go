@@ -229,7 +229,7 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	userID := req.Context().Value(middleware.UserIDKey).(string)
 
 	if req.Context().Value(middleware.CookieExistedKey) == false {
-		http.Error(res, "Unauthorized - cookie was created by request", http.StatusUnauthorized)
+		http.Error(res, "Unauthorized - cookie was created by request", http.StatusNoContent)
 		return
 	}
 

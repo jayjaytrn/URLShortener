@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"bytes"
@@ -14,16 +14,15 @@ import (
 
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/auth"
-	"github.com/jayjaytrn/URLShortener/internal/handlers"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 )
 
-// ExampleShorten demonstrates the functionality of the /api/shorten handler.
-func ExampleShorten() {
+// ExampleHandler_Shorten demonstrates the functionality of the /api/shorten handler.
+func ExampleHandler_Shorten() {
 	cfg := config.GetConfig()
 	storage := db.GetStorage(cfg, logging.GetSugaredLogger())
 	authManager := auth.NewManager()
-	h := handlers.Handler{Storage: storage, Config: cfg, AuthManager: authManager}
+	h := Handler{Storage: storage, Config: cfg, AuthManager: authManager}
 
 	// Create a request
 	requestBody, _ := json.Marshal(types.ShortenRequest{URL: "https://example.com"})
@@ -36,8 +35,8 @@ func ExampleShorten() {
 	h.Shorten(w, req.WithContext(ctx))
 }
 
-// ExampleURLReturner demonstrates the functionality of the /{id} handler.
-func ExampleURLReturner() {
+// ExampleHandler_URLReturner demonstrates the functionality of the /{id} handler.
+func ExampleHandler_URLReturner() {
 	cfg := &config.Config{
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
@@ -47,7 +46,7 @@ func ExampleURLReturner() {
 	}
 	storage := db.GetStorage(cfg, logging.GetSugaredLogger())
 	authManager := auth.NewManager()
-	h := handlers.Handler{Storage: storage, Config: cfg, AuthManager: authManager}
+	h := Handler{Storage: storage, Config: cfg, AuthManager: authManager}
 
 	// Add test data
 	storage.Put(types.URLData{
@@ -74,7 +73,7 @@ func ExampleURLReturner() {
 }
 
 // ExampleUrls demonstrates the functionality of the /api/user/urls handler.
-func ExampleUrls() {
+func ExampleHandler_Urls() {
 	cfg := &config.Config{
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
@@ -84,7 +83,7 @@ func ExampleUrls() {
 	}
 
 	storage := db.GetStorage(cfg, logging.GetSugaredLogger())
-	h := handlers.Handler{Storage: storage, Config: cfg}
+	h := Handler{Storage: storage, Config: cfg}
 
 	// Add test data
 	storage.Put(types.URLData{

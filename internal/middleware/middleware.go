@@ -24,34 +24,34 @@ const UserIDKey ContextKey = "userID"
 // CookieExistedKey is the key to determine if the cookie existed before the request.
 const CookieExistedKey ContextKey = "cookieExisted"
 
-type (
-	// loggingResponseWriter is a wrapper around http.ResponseWriter that captures response details.
-	loggingResponseWriter struct {
-		http.ResponseWriter
-		responseData *responseData
-	}
+// loggingResponseWriter is a wrapper around http.ResponseWriter that captures response details.
+// It allows you to intercept the response data (status code and size) for logging purposes.
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	responseData *responseData
+}
 
-	// responseData stores response metadata such as status code and response size.
-	responseData struct {
-		status int
-		size   int
-	}
+// responseData stores response metadata such as status code and response size.
+// It is used in loggingResponseWriter to track the status and size of the HTTP response.
+type responseData struct {
+	status int // HTTP status code of the response.
+	size   int // Size of the response in bytes.
+}
 
-	// gzipWriter wraps the ResponseWriter and allows writing compressed data.
-	gzipWriter struct {
-		http.ResponseWriter
-		GzipWriter io.Writer
-	}
+// gzipWriter wraps the ResponseWriter and allows writing compressed data.
+type gzipWriter struct {
+	http.ResponseWriter
+	GzipWriter io.Writer
+}
 
-	// gzipReader wraps a gzip reader to handle decompression.
-	gzipReader struct {
-		r          io.ReadCloser
-		GzipReader *gzip.Reader
-	}
+// gzipReader wraps a gzip reader to handle decompression.
+type gzipReader struct {
+	r          io.ReadCloser
+	GzipReader *gzip.Reader
+}
 
-	// Middleware defines the signature of a middleware function.
-	Middleware func(http.Handler, *zap.SugaredLogger) http.Handler
-)
+// Middleware defines the signature of a middleware function.
+type Middleware func(http.Handler, *zap.SugaredLogger) http.Handler
 
 // Conveyor applies a chain of middlewares to a given handler.
 func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middleware) http.Handler {

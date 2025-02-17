@@ -6,23 +6,32 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/types"
 )
 
+// ShortenerStorage defines the interface for URL shortening storage operations.
 type ShortenerStorage interface {
-	// GetOriginal возвращает оригинальный URL по короткому URL
+	// GetOriginal retrieves the original URL corresponding to the given short URL.
 	GetOriginal(shortURL string) (string, error)
-	// Put добавляет новую запись в БД, возвращает true если запись была добавлена
+
+	// Put adds a new URL record to the storage. Returns an error if the insertion fails.
 	Put(urlData types.URLData) error
-	// Exists возвращает true если запись найдена
+
+	// Exists checks if a given short URL exists in the storage.
 	Exists(url string) (bool, error)
-	// PutBatch добавляет пачку новых записей в БД, если одна из записей не удалась, не записывается вся пачка
+
+	// PutBatch inserts a batch of URL records atomically. If one record fails, the entire batch is not inserted.
 	PutBatch(ctx context.Context, batchData []types.URLData) error
-	// Close закрывает соединение с базой
+
+	// Close closes the connection to the storage.
 	Close(ctx context.Context) error
-	// Ping проверяет доступность хранилища
+
+	// Ping checks the availability of the storage.
 	Ping(ctx context.Context) error
-	// GenerateNewUserID возвращает новый ID для пользователя
+
+	// GenerateNewUserID generates and returns a new unique user ID.
 	GenerateNewUserID() string
-	// GetURLsByUserID возвращает все url для userID
+
+	// GetURLsByUserID retrieves all URLs associated with a given user ID.
 	GetURLsByUserID(userID string) ([]types.URLData, error)
-	// BatchDelete помечает url как удаленные
+
+	// BatchDelete marks a batch of URLs as deleted for a given user.
 	BatchDelete(urlChannel chan string, userID string)
 }

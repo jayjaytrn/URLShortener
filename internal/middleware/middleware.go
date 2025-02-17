@@ -15,37 +15,46 @@ import (
 	"go.uber.org/zap"
 )
 
+// ContextKey defines a custom type for context keys to avoid key collisions.
 type ContextKey string
 
 const (
-	UserIDKey        ContextKey = "userID"
+	// UserIDKey is the key used to store the user ID in the request context.
+	UserIDKey ContextKey = "userID"
+	// CookieExistedKey is the key to determine if the cookie existed before the request.
 	CookieExistedKey ContextKey = "cookieExisted"
 )
 
 type (
+	// loggingResponseWriter is a wrapper around http.ResponseWriter that captures response details.
 	loggingResponseWriter struct {
 		http.ResponseWriter
 		responseData *responseData
 	}
 
+	// responseData stores response metadata such as status code and response size.
 	responseData struct {
 		status int
 		size   int
 	}
 
+	// gzipWriter wraps the ResponseWriter and allows writing compressed data.
 	gzipWriter struct {
 		http.ResponseWriter
 		GzipWriter io.Writer
 	}
 
+	// gzipReader wraps a gzip reader to handle decompression.
 	gzipReader struct {
 		r          io.ReadCloser
 		GzipReader *gzip.Reader
 	}
 
+	// Middleware defines the signature of a middleware function.
 	Middleware func(http.Handler, *zap.SugaredLogger) http.Handler
 )
 
+// Conveyor applies a chain of middlewares to a given handler.
 func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middleware) http.Handler {
 	for _, middleware := range middlewares {
 		h = middleware(h, sugar)
@@ -53,6 +62,7 @@ func Conveyor(h http.Handler, sugar *zap.SugaredLogger, middlewares ...Middlewar
 	return h
 }
 
+// WriteWithCompression is a middleware that enables GZIP compression for responses.
 func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-Type")
@@ -63,9 +73,8 @@ func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler
 		}
 
 		acceptEncoding := r.Header.Get("Accept-Encoding")
-		supportsGzip := strings.Contains(acceptEncoding, "gzip")
-		if !supportsGzip {
-			sugar.Info("Accept-Encoding is not allowed")
+		if !strings.Contains(acceptEncoding, "gzip") {
+			sugar.Info("Accept-Encoding does not allow compression")
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -83,16 +92,17 @@ func WriteWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler
 	})
 }
 
+// Write compresses and writes data to the response.
 func (w gzipWriter) Write(b []byte) (int, error) {
 	return w.GzipWriter.Write(b)
 }
 
+// ReadWithCompression is a middleware that enables GZIP decompression for incoming requests.
 func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contentEncoding := r.Header.Get("Content-Encoding")
-		sendsGzip := strings.Contains(contentEncoding, "gzip")
-		if !sendsGzip {
-			sugar.Info("Content-Encoding is not allowed")
+		if !strings.Contains(contentEncoding, "gzip") {
+			sugar.Info("Content-Encoding does not allow decompression")
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -111,10 +121,12 @@ func ReadWithCompression(h http.Handler, sugar *zap.SugaredLogger) http.Handler 
 	})
 }
 
+// Read reads compressed data and decompresses it.
 func (r *gzipReader) Read(p []byte) (n int, err error) {
 	return r.GzipReader.Read(p)
 }
 
+// Close closes the underlying reader.
 func (r *gzipReader) Close() error {
 	if err := r.r.Close(); err != nil {
 		return err
@@ -122,6 +134,7 @@ func (r *gzipReader) Close() error {
 	return r.GzipReader.Close()
 }
 
+// newGzipReader creates a new GZIP reader.
 func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -134,6 +147,7 @@ func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	}, nil
 }
 
+// WithLogging is a middleware that logs requests and responses.
 func WithLogging(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -161,17 +175,20 @@ func WithLogging(h http.Handler, sugar *zap.SugaredLogger) http.Handler {
 	})
 }
 
+// Write captures response size.
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
+// WriteHeader captures the response status code.
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
 }
 
+// WithAuth is a middleware that manages JWT authentication and assigns user IDs.
 func WithAuth(next http.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var newJWT string
@@ -179,19 +196,17 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 		cookie, err := r.Cookie("Authorization")
 		if err != nil {
 			if errors.Is(err, http.ErrNoCookie) {
-				// Если кука отсутствует, создаём новый JWT который потом передадим в куке
-				logger.Debug("Кука отсутствует, создаем новый JWT")
+				// Create a new JWT since the cookie is missing
+				logger.Debug("Cookie missing, generating new JWT")
 				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 				if err != nil {
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
 				ctx := context.WithValue(r.Context(), UserIDKey, newUserID)
-				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
 				ctx = context.WithValue(ctx, CookieExistedKey, false)
 				r = r.WithContext(ctx)
 
-				// установим новый JWT так как старого не было
 				http.SetCookie(w, &http.Cookie{
 					Name:     "Authorization",
 					Value:    newJWT,
@@ -199,28 +214,26 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					HttpOnly: true,
 				})
 			} else {
-				logger.Debug("Ошибка при получении куки: " + err.Error())
-				http.Error(w, "Ошибка при получении куки", http.StatusUnauthorized)
+				logger.Debug("Error retrieving cookie: " + err.Error())
+				http.Error(w, "Error retrieving cookie", http.StatusUnauthorized)
 				return
 			}
 		} else {
-			// Если кука существует, проверяем JWT
-			logger.Debug("Кука существует, проверяем JWT")
+			// Validate JWT from existing cookie
+			logger.Debug("Cookie found, validating JWT")
 			userID, err := authManager.GetUserIDFromJWTString(cookie.Value)
 			if err != nil {
-				logger.Debug("Проверить не удалось: " + err.Error())
-				// Если JWT не валиден, создаём новый JWT
-				logger.Debug("Ошибка при получения ID из куки token is not valid: " + err.Error())
+				logger.Debug("JWT validation failed: " + err.Error())
+				// Generate a new JWT if the old one is invalid
 				newJWT, err = authManager.BuildJWTStringWithNewID(newUserID)
 				if err != nil {
 					http.Error(w, "authorization error", http.StatusInternalServerError)
 					return
 				}
-				ctx := context.WithValue(r.Context(), UserIDKey, userID)
-				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
+				ctx := context.WithValue(r.Context(), UserIDKey, newUserID)
 				ctx = context.WithValue(ctx, CookieExistedKey, true)
 				r = r.WithContext(ctx)
-				// установим новый JWT так как старый оказался невалидным
+
 				http.SetCookie(w, &http.Cookie{
 					Name:     "Authorization",
 					Value:    newJWT,
@@ -228,9 +241,8 @@ func WithAuth(next http.Handler, authManager *auth.Manager, storage db.Shortener
 					HttpOnly: true,
 				})
 			} else {
-				// куки тут не трогаем так как они валидные
+				// Valid JWT, setting the user ID in context
 				ctx := context.WithValue(r.Context(), UserIDKey, userID)
-				// Для метода Urls который должен вернуть 401 если куки не было изначально передадим в контексте инфу
 				ctx = context.WithValue(ctx, CookieExistedKey, true)
 				r = r.WithContext(ctx)
 			}

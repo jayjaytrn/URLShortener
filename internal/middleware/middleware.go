@@ -4,12 +4,13 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
-	"github.com/jayjaytrn/URLShortener/internal/auth"
-	"github.com/jayjaytrn/URLShortener/internal/db"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/jayjaytrn/URLShortener/internal/auth"
+	"github.com/jayjaytrn/URLShortener/internal/db"
 
 	"go.uber.org/zap"
 )

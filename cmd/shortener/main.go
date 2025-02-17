@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	pprof "github.com/go-chi/chi/v5/middleware"
 	"github.com/jayjaytrn/URLShortener/config"
@@ -11,7 +13,6 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"github.com/jayjaytrn/URLShortener/logging"
 	"go.uber.org/zap"
-	"net/http"
 	//_ "net/http/pprof"
 )
 

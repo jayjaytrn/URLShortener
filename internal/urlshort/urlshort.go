@@ -2,11 +2,12 @@ package urlshort
 
 import (
 	"fmt"
-	"github.com/jayjaytrn/URLShortener/config"
-	"github.com/jayjaytrn/URLShortener/internal/types"
 	"math/rand"
 	"regexp"
 	"time"
+
+	"github.com/jayjaytrn/URLShortener/config"
+	"github.com/jayjaytrn/URLShortener/internal/types"
 
 	"github.com/jayjaytrn/URLShortener/internal/db"
 )

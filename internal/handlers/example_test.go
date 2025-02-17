@@ -24,7 +24,6 @@ func ExampleHandler_Shorten() {
 	authManager := auth.NewManager()
 	h := Handler{Storage: storage, Config: cfg, AuthManager: authManager}
 
-	// Create a request
 	requestBody, _ := json.Marshal(types.ShortenRequest{URL: "https://example.com"})
 	req := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewBuffer(requestBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -48,19 +47,16 @@ func ExampleHandler_URLReturner() {
 	authManager := auth.NewManager()
 	h := Handler{Storage: storage, Config: cfg, AuthManager: authManager}
 
-	// Add test data
 	storage.Put(types.URLData{
 		ShortURL:    "abcd1234",
 		OriginalURL: "https://example.com",
 		UserID:      "test-user",
 	})
 
-	// Create a request
 	req := httptest.NewRequest(http.MethodGet, "/abcd1234", nil)
 	w := httptest.NewRecorder()
 	h.URLReturner(w, req)
 
-	// Get the response
 	resp := w.Result()
 	defer resp.Body.Close()
 
@@ -85,14 +81,12 @@ func ExampleHandler_Urls() {
 	storage := db.GetStorage(cfg, logging.GetSugaredLogger())
 	h := Handler{Storage: storage, Config: cfg}
 
-	// Add test data
 	storage.Put(types.URLData{
 		ShortURL:    "abcd1234",
 		OriginalURL: "https://example.com",
 		UserID:      "test-user",
 	})
 
-	// Create a request
 	req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
 	w := httptest.NewRecorder()
 
@@ -100,7 +94,6 @@ func ExampleHandler_Urls() {
 
 	h.Urls(w, req.WithContext(ctx))
 
-	// Get the response
 	resp := w.Result()
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)

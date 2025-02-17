@@ -18,12 +18,11 @@ import (
 // ContextKey defines a custom type for context keys to avoid key collisions.
 type ContextKey string
 
-const (
-	// UserIDKey is the key used to store the user ID in the request context.
-	UserIDKey ContextKey = "userID"
-	// CookieExistedKey is the key to determine if the cookie existed before the request.
-	CookieExistedKey ContextKey = "cookieExisted"
-)
+// UserIDKey is the key used to store the user ID in the request context.
+const UserIDKey ContextKey = "userID"
+
+// CookieExistedKey is the key to determine if the cookie existed before the request.
+const CookieExistedKey ContextKey = "cookieExisted"
 
 type (
 	// loggingResponseWriter is a wrapper around http.ResponseWriter that captures response details.

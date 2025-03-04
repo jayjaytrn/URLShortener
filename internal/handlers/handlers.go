@@ -52,7 +52,12 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := req.Context().Value(middleware.UserIDKey).(string)
+	userID, ok := req.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		http.Error(res, "internal server error", http.StatusBadRequest)
+		return
+	}
+
 	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
@@ -131,7 +136,12 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := req.Context().Value(middleware.UserIDKey).(string)
+	userID, ok := req.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		http.Error(res, "internal server error", http.StatusBadRequest)
+		return
+	}
+
 	urlData := types.URLData{
 		OriginalURL: url,
 		ShortURL:    su,
@@ -145,6 +155,7 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 			shortenResponse := types.ShortenResponse{
 				Result: r,
 			}
+
 			br, err := json.Marshal(shortenResponse)
 			if err != nil {
 				http.Error(res, err.Error(), http.StatusBadRequest)
@@ -197,7 +208,12 @@ func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	userID := req.Context().Value(middleware.UserIDKey).(string)
+	userID, ok := req.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		http.Error(res, "internal server error", http.StatusBadRequest)
+		return
+	}
+
 	batchResponse, batchData, err := urlshort.GenerateShortBatch(h.Config, h.Storage, batchRequest, userID)
 	if err != nil {
 		http.Error(res, "failed to generate short URL: "+err.Error(), http.StatusInternalServerError)
@@ -233,7 +249,11 @@ func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 // Urls retrieves all shortened URLs associated with a specific user.
 func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
-	userID := req.Context().Value(middleware.UserIDKey).(string)
+	userID, ok := req.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		http.Error(res, "internal server error", http.StatusBadRequest)
+		return
+	}
 
 	if req.Context().Value(middleware.CookieExistedKey) == false {
 		http.Error(res, "Unauthorized - cookie was created by request", http.StatusNoContent)
@@ -261,7 +281,11 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 // DeleteUrlsAsync asynchronously deletes a list of shortened URLs.
 func (h *Handler) DeleteUrlsAsync(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
-	userID := req.Context().Value(middleware.UserIDKey).(string)
+	userID, ok := req.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		http.Error(res, "internal server error", http.StatusBadRequest)
+		return
+	}
 
 	// Проверка авторизации
 	if req.Context().Value(middleware.CookieExistedKey) == false {

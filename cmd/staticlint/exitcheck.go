@@ -57,17 +57,23 @@
 // 3. **Analyzer ST1005** is added separately (this was previously classified as ST1005).
 //
 // 4. **Additional Public Analyzers** from external repositories:
+//
 //   - **forcetypeassert**: Checks the correct usage of type assertions.
+//
 //   - **wraperrfmt**: Verifies the formatting of wrapped errors.
 //
-//  5. **Custom Analyzer: ExitCheckAnalyzer**.
+//     5. **Custom Analyzer: ExitCheckAnalyzer**.
 //     This analyzer prohibits the direct call to os.Exit in the main function of packages named "main".
 //     It works as follows:
-//     - Analysis is performed only for packages whose import path starts with "github.com/jayjaytrn/URLShortener".
-//     - Only packages with the name "main" are analyzed.
-//     - Files located in the vendor directory or marked as generated (with "Code generated" comments)
+//
+//   - Analysis is performed only for packages whose import path starts with "github.com/jayjaytrn/URLShortener".
+//
+//   - Only packages with the name "main" are analyzed.
+//
+//   - Files located in the vendor directory or marked as generated (with "Code generated" comments)
 //     are ignored.
-//     - If os.Exit is found in the main function, the analyzer reports an error with the file name and line number.
+//
+//   - If os.Exit is found in the main function, the analyzer reports an error with the file name and line number.
 //
 // **Multichecker Launch Mechanism:**
 // The main function collects all analyzers into a slice and passes them to multichecker.Main.

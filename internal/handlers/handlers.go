@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/auth"
 	"github.com/jayjaytrn/URLShortener/internal/db"
@@ -11,17 +15,16 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"github.com/jayjaytrn/URLShortener/internal/types"
 	"github.com/jayjaytrn/URLShortener/internal/urlshort"
-	"io"
-	"net/http"
-	"strings"
 )
 
+// Handler represents the main HTTP handler for the URL shortening service.
 type Handler struct {
 	Storage     db.ShortenerStorage
 	Config      *config.Config
 	AuthManager *auth.Manager
 }
 
+// URLWaiter handles waiting for a URL input and processing it.
 func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(res, "only POST method is allowed", http.StatusBadRequest)
@@ -76,6 +79,7 @@ func (h *Handler) URLWaiter(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(r))
 }
 
+// URLReturner retrieves the original URL from the shortened URL.
 func (h *Handler) URLReturner(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		http.Error(res, "only GET method is allowed", http.StatusBadRequest)
@@ -98,6 +102,7 @@ func (h *Handler) URLReturner(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+// Shorten handles the request to shorten a given URL.
 func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(req.Body)
@@ -170,6 +175,7 @@ func (h *Handler) Shorten(res http.ResponseWriter, req *http.Request) {
 	res.Write(br)
 }
 
+// ShortenBatch processes batch URL shortening requests.
 func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(req.Body)
@@ -214,6 +220,7 @@ func (h *Handler) ShortenBatch(res http.ResponseWriter, req *http.Request) {
 	res.Write(br)
 }
 
+// Ping checks the database connection status.
 func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	if err := h.Storage.Ping(req.Context()); err != nil {
 		http.Error(res, "database connection error", http.StatusInternalServerError)
@@ -223,12 +230,13 @@ func (h *Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
+// Urls retrieves all shortened URLs associated with a specific user.
 func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	userID := req.Context().Value(middleware.UserIDKey).(string)
 
 	if req.Context().Value(middleware.CookieExistedKey) == false {
-		http.Error(res, "Unauthorized - cookie was created by request", http.StatusUnauthorized)
+		http.Error(res, "Unauthorized - cookie was created by request", http.StatusNoContent)
 		return
 	}
 
@@ -250,6 +258,7 @@ func (h *Handler) Urls(res http.ResponseWriter, req *http.Request) {
 	res.Write(urlsResponse)
 }
 
+// DeleteUrlsAsync asynchronously deletes a list of shortened URLs.
 func (h *Handler) DeleteUrlsAsync(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	userID := req.Context().Value(middleware.UserIDKey).(string)
@@ -282,5 +291,4 @@ func (h *Handler) DeleteUrlsAsync(res http.ResponseWriter, req *http.Request) {
 
 	// Запускаем BatchDelete с каналом urlChannel
 	go h.Storage.BatchDelete(urlChannel, userID)
-
 }

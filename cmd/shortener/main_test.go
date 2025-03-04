@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/jayjaytrn/URLShortener/internal/middleware"
 
 	"github.com/jayjaytrn/URLShortener/config"
 	"github.com/jayjaytrn/URLShortener/internal/db/filestorage"

@@ -2,16 +2,18 @@ package main
 
 import (
 	"context"
-	"github.com/jayjaytrn/URLShortener/internal/auth"
-	"github.com/jayjaytrn/URLShortener/internal/db"
-	"go.uber.org/zap"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	pprof "github.com/go-chi/chi/v5/middleware"
 	"github.com/jayjaytrn/URLShortener/config"
+	"github.com/jayjaytrn/URLShortener/internal/auth"
+	"github.com/jayjaytrn/URLShortener/internal/db"
 	"github.com/jayjaytrn/URLShortener/internal/handlers"
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"github.com/jayjaytrn/URLShortener/logging"
+	"go.uber.org/zap"
+	//_ "net/http/pprof"
 )
 
 func main() {
@@ -41,6 +43,7 @@ func main() {
 
 func initRouter(h handlers.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) *chi.Mux {
 	r := chi.NewRouter()
+	r.Mount("/debug", pprof.Profiler())
 	r.Post(`/`,
 		func(w http.ResponseWriter, r *http.Request) {
 			middleware.Conveyor(

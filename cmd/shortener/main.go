@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,10 +14,30 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"github.com/jayjaytrn/URLShortener/logging"
 	"go.uber.org/zap"
-	//_ "net/http/pprof"
+	// _ "net/http/pprof"
+)
+
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 func main() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
 	logger := logging.GetSugaredLogger()
 	defer logger.Sync()
 

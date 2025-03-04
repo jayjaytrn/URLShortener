@@ -46,7 +46,7 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		cfg: cfg,
 	}
 
-	if err := manager.createShortenerTable(); err != nil {
+	if err = manager.createShortenerTable(); err != nil {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 

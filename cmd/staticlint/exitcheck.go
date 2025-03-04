@@ -225,7 +225,6 @@ func runExitCheck(pass *analysis.Pass) (interface{}, error) {
 }
 
 func main() {
-	// Собираем список анализаторов
 	analyzers := []*analysis.Analyzer{
 		asmdecl.Analyzer,
 		assign.Analyzer,

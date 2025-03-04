@@ -37,7 +37,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/errorsas"
 	"golang.org/x/tools/go/analysis/passes/findcall"
 	"golang.org/x/tools/go/analysis/passes/printf"
-	"golang.org/x/tools/go/analysis/passes/shadow"
 	"golang.org/x/tools/go/analysis/passes/shift"
 	"golang.org/x/tools/go/analysis/passes/structtag"
 	"golang.org/x/tools/go/analysis/passes/unreachable"
@@ -144,7 +143,6 @@ func main() {
 		errorsas.Analyzer,
 		findcall.Analyzer,
 		printf.Analyzer,
-		shadow.Analyzer,
 		shift.Analyzer,
 		structtag.Analyzer,
 		unreachable.Analyzer,

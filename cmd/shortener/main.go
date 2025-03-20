@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"golang.org/x/crypto/acme/autocert"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -58,6 +59,23 @@ func main() {
 
 	r := initRouter(h, authManager, s, logger)
 
+	if cfg.EnableHttps {
+		manager := &autocert.Manager{
+			// директория для хранения сертификатов
+			Cache: autocert.DirCache("cache-dir"),
+			// функция, принимающая Terms of Service издателя сертификатов
+			Prompt: autocert.AcceptTOS,
+		}
+
+		server := &http.Server{
+			Addr:      ":443",
+			Handler:   r,
+			TLSConfig: manager.TLSConfig(),
+		}
+		err := server.ListenAndServeTLS("", "")
+		logger.Fatalw("failed to start server", "error", err)
+		return
+	}
 	err := http.ListenAndServe(cfg.ServerAddress, r)
 	logger.Fatalw("failed to start server", "error", err)
 }

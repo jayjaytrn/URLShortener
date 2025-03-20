@@ -65,6 +65,8 @@ func main() {
 			Cache: autocert.DirCache("cache-dir"),
 			// функция, принимающая Terms of Service издателя сертификатов
 			Prompt: autocert.AcceptTOS,
+			// перечень доменов, для которых будут поддерживаться сертификаты
+			HostPolicy: autocert.HostWhitelist("mysite.ru", "www.mysite.ru"),
 		}
 
 		server := &http.Server{

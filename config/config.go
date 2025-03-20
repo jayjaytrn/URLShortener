@@ -1,7 +1,9 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
+	"os"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/jayjaytrn/URLShortener/logging"
@@ -25,6 +27,18 @@ func GetConfig() *Config {
 	defer logger.Sync()
 
 	config := &Config{}
+
+	configFilePath := flag.String("c", os.Getenv("CONFIG"), "path to config file")
+	flag.Parse()
+
+	if *configFilePath != "" {
+		jsonConfig, err := loadFromJSON(*configFilePath)
+		if err != nil {
+			logger.Debug("failed to load config from JSON:", err)
+		} else {
+			config = jsonConfig // Применяем загруженный JSON
+		}
+	}
 
 	// Parsing command-line flags
 	flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "server listen address")
@@ -53,4 +67,19 @@ func GetConfig() *Config {
 
 	config.StorageType = "memory" // Default to in-memory storage
 	return config
+}
+
+func loadFromJSON(filePath string) (*Config, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var cfg Config
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }

@@ -14,7 +14,7 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`       // Path to file storage (if used)
 	DatabaseDSN     string `env:"DATABASE_DSN"`            // Database connection string (if used)
 	StorageType     string // Storage type: memory, file, or postgres
-	EnableHttps     bool   `env:"ENABLE_HTTPS"`
+	EnableHTTPS     bool   `env:"ENABLE_HTTPS"` // EnableHttps
 }
 
 // GetConfig initializes and returns the application configuration.
@@ -31,7 +31,7 @@ func GetConfig() *Config {
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "short URL base")
 	flag.StringVar(&config.FileStoragePath, "f", "storage.json", "file storage path")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database DSN")
-	flag.BoolVar(&config.EnableHttps, "s", false, "enable https")
+	flag.BoolVar(&config.EnableHTTPS, "s", false, "enable https")
 	flag.Parse()
 
 	// Parsing environment variables

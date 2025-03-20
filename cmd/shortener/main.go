@@ -59,7 +59,7 @@ func main() {
 
 	r := initRouter(h, authManager, s, logger)
 
-	if cfg.EnableHttps {
+	if cfg.EnableHTTPS {
 		manager := &autocert.Manager{
 			// директория для хранения сертификатов
 			Cache: autocert.DirCache("cache-dir"),

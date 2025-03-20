@@ -2,9 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/acme/autocert"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	pprof "github.com/go-chi/chi/v5/middleware"
@@ -59,27 +64,43 @@ func main() {
 
 	r := initRouter(h, authManager, s, logger)
 
-	if cfg.EnableHTTPS {
-		manager := &autocert.Manager{
-			// директория для хранения сертификатов
-			Cache: autocert.DirCache("cache-dir"),
-			// функция, принимающая Terms of Service издателя сертификатов
-			Prompt: autocert.AcceptTOS,
-			// перечень доменов, для которых будут поддерживаться сертификаты
-			HostPolicy: autocert.HostWhitelist("mysite.ru", "www.mysite.ru"),
-		}
-
-		server := &http.Server{
-			Addr:      ":443",
-			Handler:   r,
-			TLSConfig: manager.TLSConfig(),
-		}
-		err := server.ListenAndServeTLS("", "")
-		logger.Fatalw("failed to start server", "error", err)
-		return
+	server := &http.Server{
+		Addr:    cfg.ServerAddress,
+		Handler: r,
 	}
-	err := http.ListenAndServe(cfg.ServerAddress, r)
-	logger.Fatalw("failed to start server", "error", err)
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	go func() {
+		logger.Infow("starting server", "address", cfg.ServerAddress)
+		var err error
+		if cfg.EnableHTTPS {
+			manager := &autocert.Manager{
+				Cache:      autocert.DirCache("cache-dir"),
+				Prompt:     autocert.AcceptTOS,
+				HostPolicy: autocert.HostWhitelist("mysite.ru", "www.mysite.ru"),
+			}
+			server.TLSConfig = manager.TLSConfig()
+			err = server.ListenAndServeTLS("", "")
+		} else {
+			err = server.ListenAndServe()
+		}
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Fatalw("server error", "error", err)
+		}
+	}()
+
+	sig := <-sigChan
+	logger.Infow("received shutdown signal", "signal", sig)
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer shutdownCancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Errorw("server shutdown error", "error", err)
+	}
+
+	logger.Infow("server gracefully stopped")
 }
 
 func initRouter(h handlers.Handler, authManager *auth.Manager, storage db.ShortenerStorage, logger *zap.SugaredLogger) *chi.Mux {

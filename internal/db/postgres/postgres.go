@@ -228,3 +228,20 @@ func preparePutStatement(db *sql.DB) (*sql.Stmt, error) {
 	}
 	return stmt, nil
 }
+
+// GetStats возвращает количество сокращённых URL и количество уникальных пользователей.
+func (m *Manager) GetStats() (types.Stats, error) {
+	var stats types.Stats
+
+	err := m.db.QueryRow("SELECT COUNT(*) FROM shortener WHERE is_deleted = FALSE").Scan(&stats.Urls)
+	if err != nil {
+		return stats, fmt.Errorf("failed to get total URLs: %w", err)
+	}
+
+	err = m.db.QueryRow("SELECT COUNT(DISTINCT user_id) FROM shortener WHERE is_deleted = FALSE").Scan(&stats.Users)
+	if err != nil {
+		return stats, fmt.Errorf("failed to get total users: %w", err)
+	}
+
+	return stats, nil
+}

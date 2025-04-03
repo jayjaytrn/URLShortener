@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package urlshortener;
+
+option go_package = "github.com/jayjaytrn/URLShortener/proto;proto";
+
+service URLShortener {
+  rpc URLReturner(URLReturnerRequest) returns (URLReturnerResponse) {}
+  rpc Shorten(ShortenRequest) returns (ShortenResponse) {}
+  rpc ShortenBatch(ShortenBatchListRequest) returns (ShortenBatchListResponse) {}
+  rpc Urls(UrlsRequest) returns (UrlsResponse) {}
+  rpc DeleteUrlsAsync(DeleteUrlsAsyncRequest) returns (DeleteUrlsAsyncResponse) {}
+  rpc Stats(StatsRequest) returns (StatsResponse) {}
+}
+
+// Request/Response messages
+message ShortenRequest {
+  string url = 1;
+}
+
+message ShortenResponse {
+  string result = 1;
+}
+
+message URLReturnerRequest {
+  string short_url = 1;
+}
+
+message URLReturnerResponse {
+  string original_url = 1;
+}
+
+message ShortenBatchListRequest {
+  repeated ShortenBatchRequest urls = 1;
+}
+
+message ShortenBatchRequest {
+  string correlation_id = 1;
+  string original_url = 2;
+}
+
+message ShortenBatchListResponse {
+  repeated ShortenBatchResponse urls = 1;
+}
+
+message ShortenBatchResponse {
+  string correlation_id = 1;
+  string short_url = 2;
+}
+
+message UrlsRequest {
+  string user_id = 1;
+}
+
+message UrlsResponse {
+  repeated UserURL urls = 1;
+}
+
+message UserURL {
+  string short_url = 1;
+  string original_url = 2;
+}
+
+message DeleteUrlsAsyncRequest {
+  string user_id = 1;
+  repeated string short_urls = 2;
+}
+
+message DeleteUrlsAsyncResponse {
+  bool success = 1;
+}
+
+message StatsRequest {}
+
+message StatsResponse {
+  int32 urls_count = 1;
+  int32 users_count = 2;
+}

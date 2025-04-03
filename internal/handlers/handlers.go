@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/jayjaytrn/URLShortener/logging"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 
@@ -315,4 +317,54 @@ func (h *Handler) DeleteUrlsAsync(res http.ResponseWriter, req *http.Request) {
 
 	// Запускаем BatchDelete с каналом urlChannel
 	go h.Storage.BatchDelete(urlChannel, userID)
+}
+
+func (h *Handler) Stats(res http.ResponseWriter, req *http.Request) {
+	logger := logging.GetSugaredLogger()
+	defer logger.Sync()
+
+	trustedSubnet := h.Config.TrustedSubnet
+	if trustedSubnet == "" {
+		http.Error(res, "access denied: trusted_subnet is not set", http.StatusForbidden)
+		return
+	}
+
+	clientIP := req.Header.Get("X-Real-IP")
+	if clientIP == "" {
+		http.Error(res, "access denied: missing X-Real-IP", http.StatusForbidden)
+		return
+	}
+
+	if !isIPInTrustedSubnet(clientIP, trustedSubnet) {
+		http.Error(res, "access denied: IP not in trusted subnet", http.StatusForbidden)
+		return
+	}
+
+	// Получаем количество уникальных пользователей и сокращённых URL
+	stats := h.Storage.GetStats()
+
+	// Формируем JSON-ответ
+	response := types.Stats{
+		Urls:  stats.Urls,
+		Users: stats.Users,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response)
+}
+
+// isIPInTrustedSubnet проверяет, входит ли IP в доверенную подсеть
+func isIPInTrustedSubnet(ip, subnet string) bool {
+	clientIP := net.ParseIP(ip)
+	if clientIP == nil {
+		return false
+	}
+
+	_, ipNet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return false
+	}
+
+	return ipNet.Contains(clientIP)
 }

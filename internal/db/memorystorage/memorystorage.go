@@ -98,3 +98,20 @@ func (m *Manager) Close(_ context.Context) error {
 func (m *Manager) Ping(_ context.Context) error {
 	return fmt.Errorf("ping is not supported for memory storage")
 }
+
+// GetStats возвращает количество сокращенных URL и количество пользователей.
+func (m *Manager) GetStats() types.Stats {
+	urlCount := len(m.RelatesURLs)
+	userSet := make(map[string]struct{})
+
+	for _, urlData := range m.RelatesURLs {
+		if urlData.UserID != "" {
+			userSet[urlData.UserID] = struct{}{}
+		}
+	}
+
+	return types.Stats{
+		Urls:  urlCount,
+		Users: len(userSet),
+	}
+}

@@ -203,5 +203,18 @@ func initRouter(h handlers.Handler, authManager *auth.Manager, storage db.Shorte
 		},
 	)
 
+	r.Get(`/api/internal/stats`,
+		func(w http.ResponseWriter, r *http.Request) {
+			middleware.Conveyor(
+				http.HandlerFunc(h.Stats),
+				logger,
+				middleware.WithLogging,
+				func(next http.Handler, _ *zap.SugaredLogger) http.Handler {
+					return middleware.WithAuth(next, authManager, storage, logger)
+				},
+			).ServeHTTP(w, r)
+		},
+	)
+
 	return r
 }

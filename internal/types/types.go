@@ -32,3 +32,9 @@ type ShortenBatchResponse struct {
 	CorrelationID string `json:"correlation_id"` // CorrelationID is a unique identifier for the batch request
 	ShortURL      string `json:"short_url"`      // ShortURL is the shortened version of the provided URL
 }
+
+// Stats возвращает количество сокращенных URL и количество пользователей
+type Stats struct {
+	Urls  int `json:"urls"`  // количество сокращённых URL в сервисе
+	Users int `json:"users"` // количество пользователей в сервисе
+}

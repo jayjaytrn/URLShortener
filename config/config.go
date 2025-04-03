@@ -16,7 +16,8 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`    // Path to file storage (if used)
 	DatabaseDSN     string `env:"DATABASE_DSN" json:"database_dsn"`              // Database connection string (if used)
 	StorageType     string // Storage type: memory, file, or postgres (не загружается из JSON)
-	EnableHTTPS     bool   `env:"ENABLE_HTTPS" json:"enable_https"` // Enable HTTPS
+	EnableHTTPS     bool   `env:"ENABLE_HTTPS" json:"enable_https"`     // Enable HTTPS
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet"` // CIDR trusted subnet
 }
 
 // GetConfig initializes and returns the application configuration.
@@ -31,12 +32,13 @@ func GetConfig() *Config {
 	configFilePath := flag.String("c", os.Getenv("CONFIG"), "path to config file")
 
 	// Parsing command-line flags
-
 	flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "server listen address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "short URL base")
 	flag.StringVar(&config.FileStoragePath, "f", "storage.json", "file storage path")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database DSN")
 	flag.BoolVar(&config.EnableHTTPS, "s", false, "enable https")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "trusted subnet in CIDR format")
+
 	flag.Parse()
 
 	// Parsing environment variables
@@ -61,6 +63,9 @@ func GetConfig() *Config {
 			}
 			if !config.EnableHTTPS { // false по умолчанию, значит если false, то заменяем
 				config.EnableHTTPS = jsonConfig.EnableHTTPS
+			}
+			if config.TrustedSubnet == "" {
+				config.TrustedSubnet = jsonConfig.TrustedSubnet
 			}
 		}
 	}

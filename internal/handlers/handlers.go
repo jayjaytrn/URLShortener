@@ -319,6 +319,7 @@ func (h *Handler) DeleteUrlsAsync(res http.ResponseWriter, req *http.Request) {
 	go h.Storage.BatchDelete(urlChannel, userID)
 }
 
+// Stats return stats.
 func (h *Handler) Stats(res http.ResponseWriter, req *http.Request) {
 	logger := logging.GetSugaredLogger()
 	defer logger.Sync()

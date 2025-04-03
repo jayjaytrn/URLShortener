@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,7 +22,9 @@ import (
 	"github.com/jayjaytrn/URLShortener/internal/handlers"
 	"github.com/jayjaytrn/URLShortener/internal/middleware"
 	"github.com/jayjaytrn/URLShortener/logging"
+	pb "github.com/jayjaytrn/URLShortener/proto"
 	"go.uber.org/zap"
+	//
 	// _ "net/http/pprof"
 )
 
@@ -72,6 +77,13 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
+	// gRPC сервер
+	grpcServer := grpc.NewServer()
+	pb.RegisterURLShortenerServer(grpcServer, handlers.NewURLShortener(s, authManager, cfg))
+
+	// Register reflection service on gRPC server.
+	reflection.Register(grpcServer)
+
 	go func() {
 		logger.Infow("starting server", "address", cfg.ServerAddress)
 		var err error
@@ -88,6 +100,19 @@ func main() {
 		}
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalw("server error", "error", err)
+		}
+	}()
+
+	// Запуск gRPC сервера
+	go func() {
+		lis, err := net.Listen("tcp", ":50051")
+		if err != nil {
+			logger.Fatalw("failed to listen for gRPC", "error", err)
+		}
+
+		logger.Infow("starting gRPC server", "address", ":50051")
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatalw("failed to serve gRPC", "error", err)
 		}
 	}()
 

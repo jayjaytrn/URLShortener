@@ -201,7 +201,7 @@ func (fm *Manager) LoadURLStorageFromFile() error {
 }
 
 // GetStats возвращает количество сокращенных URL и количество пользователей.
-func (fm *Manager) GetStats() types.Stats {
+func (fm *Manager) GetStats() (types.Stats, error) {
 	urlCount := len(*fm.FileStorage)
 	userSet := make(map[string]struct{})
 
@@ -214,5 +214,5 @@ func (fm *Manager) GetStats() types.Stats {
 	return types.Stats{
 		Urls:  urlCount,
 		Users: len(userSet),
-	}
+	}, nil
 }

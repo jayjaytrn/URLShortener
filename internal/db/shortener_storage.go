@@ -36,5 +36,5 @@ type ShortenerStorage interface {
 	BatchDelete(urlChannel chan string, userID string)
 
 	// GetStats возвращает количество сокращенных URL и количество пользователей
-	GetStats() types.Stats
+	GetStats() (types.Stats, error)
 }

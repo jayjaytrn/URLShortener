@@ -100,7 +100,7 @@ func (m *Manager) Ping(_ context.Context) error {
 }
 
 // GetStats возвращает количество сокращенных URL и количество пользователей.
-func (m *Manager) GetStats() types.Stats {
+func (m *Manager) GetStats() (types.Stats, error) {
 	urlCount := len(m.RelatesURLs)
 	userSet := make(map[string]struct{})
 
@@ -113,5 +113,5 @@ func (m *Manager) GetStats() types.Stats {
 	return types.Stats{
 		Urls:  urlCount,
 		Users: len(userSet),
-	}
+	}, nil
 }

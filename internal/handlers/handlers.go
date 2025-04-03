@@ -341,7 +341,11 @@ func (h *Handler) Stats(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Получаем количество уникальных пользователей и сокращённых URL
-	stats := h.Storage.GetStats()
+	stats, err := h.Storage.GetStats()
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Формируем JSON-ответ
 	response := types.Stats{
